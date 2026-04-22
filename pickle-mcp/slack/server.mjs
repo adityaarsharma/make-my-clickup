@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @pickle/slack-mcp  v1.0.0
+ * @pickle/slack-mcp  v1.1.0
  *
  * Free, open-source Slack MCP server — part of the Pickle project.
  * Pure Node.js ESM · no build step · no TypeScript compilation.
@@ -12,6 +12,9 @@
  *   Auth · Lists (create, add items) · Reminders · Messages
  *
  * Zero telemetry. No phone-home. Only talks to https://slack.com/api.
+ *
+ * Lists API: uses slackLists.* endpoints (public since Sep 2025)
+ *   Docs: https://docs.slack.dev/reference/methods/slackLists.create
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -25,7 +28,7 @@ import {
 
 const XOXP_TOKEN     = process.env.SLACK_MCP_XOXP_TOKEN || process.env.SLACK_TOKEN;
 const API_BASE       = "https://slack.com/api";
-const USER_AGENT     = "pickle-slack-mcp/1.0 (+https://github.com/adityaarsharma/pickle)";
+const USER_AGENT     = "pickle-slack-mcp/1.1 (+https://github.com/adityaarsharma/pickle)";
 const TIMEOUT_MS     = 20_000;
 
 if (!XOXP_TOKEN) {
@@ -62,10 +65,31 @@ async function slackCall(method, params = {}) {
 
   const json = await res.json();
   if (!json.ok) {
-    throw new McpError(ErrorCode.InternalError, `Slack ${method} error: ${json.error}`);
+    // Include response_metadata.messages for better debugging
+    const detail = json.response_metadata?.messages?.join("; ") || "";
+    throw new McpError(
+      ErrorCode.InternalError,
+      `Slack ${method} error: ${json.error}${detail ? " — " + detail : ""}`
+    );
   }
   return json;
 }
+
+// ---------------------------------------------------------------------------
+// Column key constants (used for both create schema and item field values)
+// ---------------------------------------------------------------------------
+
+const COL = {
+  title:       "title",
+  item_type:   "item_type",
+  priority:    "priority",
+  from_to:     "from_to",
+  channel:     "channel",
+  source_link: "source_link",
+  due:         "due",
+  status:      "status",
+  quote:       "quote",
+};
 
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -138,8 +162,8 @@ const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        text:         { type: "string", description: "Message text (supports Slack mrkdwn)" },
-        blocks:       { type: "array",  description: "Optional Slack Block Kit blocks for rich formatting" },
+        text:   { type: "string", description: "Message text (supports Slack mrkdwn)" },
+        blocks: { type: "array",  description: "Optional Slack Block Kit blocks for rich formatting" },
       },
       required: ["text"],
     },
@@ -183,63 +207,73 @@ async function handleTool(name, args) {
     }
 
     case "slack_list_create": {
-      // Slack Lists API — try multiple payload shapes; the API is not fully public-documented.
-      // Attempt 1: name + channel_id (lists are channel-scoped in Slack UI)
-      // Attempt 2: name only
-      // Attempt 3: give up and return null so caller can fall back to self_dm
-
-      const attempts = [
-        { name: args.name, channel_id: args.channel_id || null },
-        { name: args.name },
-        { title: args.name },
-      ].filter(p => Object.values(p).every(v => v !== null));
-
-      let lastErr = null;
-      for (const payload of attempts) {
-        try {
-          const data = await slackCall("lists.create", payload);
-          const list_id = data.list?.id || data.id || data.list_id;
-          if (list_id) return { list_id, name: args.name };
-        } catch (e) {
-          lastErr = e;
-        }
-      }
-      throw lastErr || new McpError(ErrorCode.InternalError, "lists.create failed all attempts");
+      // Uses slackLists.create (public API since Sep 2025)
+      // Docs: https://docs.slack.dev/reference/methods/slackLists.create
+      // schema is an ARRAY of column objects (not an object with a columns key)
+      const data = await slackCall("slackLists.create", {
+        name: args.name,
+        schema: [
+          { key: COL.title,       name: "Title",       type: "text",   is_primary_column: true },
+          { key: COL.item_type,   name: "Type",        type: "select",
+            options: { choices: [{ value: "Inbox", label: "Inbox" }, { value: "Follow-up", label: "Follow-up" }] } },
+          { key: COL.priority,    name: "Priority",    type: "select",
+            options: { choices: [
+              { value: "🔴 Urgent", label: "🔴 Urgent", color: "red"    },
+              { value: "🟠 High",   label: "🟠 High",   color: "orange" },
+              { value: "🟡 Normal", label: "🟡 Normal", color: "yellow" },
+              { value: "⚪ Low",    label: "⚪ Low",    color: "grey"   },
+            ]} },
+          { key: COL.from_to,     name: "From/To",     type: "text" },
+          { key: COL.channel,     name: "Channel",     type: "text" },
+          { key: COL.source_link, name: "Source Link", type: "link" },
+          { key: COL.due,         name: "Due",         type: "date" },
+          { key: COL.status,      name: "Status",      type: "select",
+            options: { choices: [
+              { value: "Open",    label: "Open",    color: "blue"  },
+              { value: "Waiting", label: "Waiting", color: "yellow"},
+              { value: "Done",    label: "Done",    color: "green" },
+            ]} },
+          { key: COL.quote,       name: "Quote",       type: "text" },
+        ],
+      });
+      const list_id = data.list?.id || data.id || data.list_id;
+      return { list_id, name: args.name };
     }
 
     case "slack_list_find_or_create": {
-      // Try to find existing list first
+      // Try to find existing list first via slackLists.list
       try {
-        const lists = await slackCall("lists.list", {});
-        const existing = (lists.lists || []).find(l => l.name === args.name);
+        const lists = await slackCall("slackLists.list", {});
+        const existing = (lists.lists || lists.results || []).find(l => l.name === args.name);
         if (existing) return { list_id: existing.id, name: existing.name, existed: true };
-      } catch (_) { /* Lists API might 404 on some plans — fall through to create */ }
+      } catch (_) { /* Not available or empty — fall through to create */ }
 
       // Create fresh
       try {
         const created = await handleTool("slack_list_create", { name: args.name });
         return { ...created, existed: false };
       } catch (e) {
-        // Lists unavailable on this plan/token — signal fallback
         return { list_id: null, error: e.message, fallback: "self_dm" };
       }
     }
 
     case "slack_list_item_add": {
       if (!args.list_id) throw new McpError(ErrorCode.InvalidParams, "list_id required");
-      const data = await slackCall("lists.items.create", {
+      // Uses slackLists.items.create with initial_fields array
+      // Docs: https://docs.slack.dev/reference/methods/slackLists.items.create
+      const data = await slackCall("slackLists.items.create", {
         list_id: args.list_id,
-        values: {
-          "Title":       { text: { value: args.title } },
-          "Type":        { select: { value: args.item_type || "Inbox" } },
-          "Priority":    { select: { value: args.priority } },
-          "From/To":     { text:   { value: args.from_to   || "" } },
-          "Channel":     { text:   { value: args.channel   || "" } },
-          "Source Link": { link:   { url: args.source_link, label: "→ Jump to message" } },
-          "Due":         { date:   { value: args.due       || "" } },
-          "Status":      { select: { value: args.status    || "Open" } },
-          "Quote":       { text:   { value: (args.quote    || "").slice(0, 500) } },
-        },
+        initial_fields: [
+          { column_id: COL.title,       value: { rich_text: args.title } },
+          { column_id: COL.item_type,   value: { select: args.item_type || "Inbox" } },
+          { column_id: COL.priority,    value: { select: args.priority } },
+          { column_id: COL.from_to,     value: { rich_text: args.from_to   || "" } },
+          { column_id: COL.channel,     value: { rich_text: args.channel   || "" } },
+          { column_id: COL.source_link, value: { url: args.source_link, label: "→ Jump to message" } },
+          { column_id: COL.due,         value: { date: args.due || "" } },
+          { column_id: COL.status,      value: { select: args.status || "Open" } },
+          { column_id: COL.quote,       value: { rich_text: (args.quote || "").slice(0, 500) } },
+        ],
       });
       return { item_id: data.item?.id || data.id, list_id: args.list_id };
     }
@@ -252,14 +286,11 @@ async function handleTool(name, args) {
     }
 
     case "slack_post_self_dm": {
-      // Open DM with self first
       const auth = await slackCall("auth.test", {});
       const dm   = await slackCall("conversations.open", { users: auth.user_id });
       const channel_id = dm.channel.id;
-
       const payload = { channel: channel_id, text: args.text };
       if (args.blocks) payload.blocks = args.blocks;
-
       const msg = await slackCall("chat.postMessage", payload);
       return { ts: msg.ts, channel_id };
     }
@@ -286,7 +317,7 @@ async function handleTool(name, args) {
 // ---------------------------------------------------------------------------
 
 const server = new Server(
-  { name: "pickle-slack-mcp", version: "1.0.0" },
+  { name: "pickle-slack-mcp", version: "1.1.0" },
   { capabilities: { tools: {} } }
 );
 
