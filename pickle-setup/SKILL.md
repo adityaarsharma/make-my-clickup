@@ -92,9 +92,11 @@ Based on `ECO_CHOICE`, pull only the required skills from the Pickle repo into `
 ```
 
 Skills map:
-- `clickup` → need `pickle-clickup` + `pickle-mcp/clickup`
-- `slack` → need `pickle-slack`
-- `both` → need all three
+- `clickup` → need `pickle-clickup` (skill) + `pickle-mcp/clickup` (MCP server — NOT a skill)
+- `slack` → need `pickle-slack` (skill)
+- `both` → all three
+
+**Important placement:** `pickle-mcp/` is an MCP server, not a Claude skill — it has no `SKILL.md`. It belongs in `~/.claude/pickle-mcp/`, NOT in `~/.claude/skills/`. Putting it under `skills/` clutters the folder with something that isn't a skill.
 
 Print:
 ```
@@ -119,10 +121,14 @@ TMPDIR=$(mktemp -d)
 git clone --depth 1 https://github.com/adityaarsharma/pickle.git "$TMPDIR" 2>/dev/null
 mkdir -p ~/.claude/skills
 
-# Based on ECO_CHOICE:
+# Skills go under ~/.claude/skills/ (they have SKILL.md)
 if clickup needed → cp -R "$TMPDIR/pickle-clickup" ~/.claude/skills/
-if clickup needed → cp -R "$TMPDIR/pickle-mcp" ~/.claude/skills/
-if slack needed   → cp -R "$TMPDIR/pickle-slack" ~/.claude/skills/
+if slack needed   → cp -R "$TMPDIR/pickle-slack"   ~/.claude/skills/
+
+# MCP server lives OUTSIDE skills/ (not a skill, just Node code)
+if clickup needed (token path) → cp -R "$TMPDIR/pickle-mcp" ~/.claude/pickle-mcp
+# Migration: if a stale copy sits under skills/, move it out silently
+[ -d ~/.claude/skills/pickle-mcp ] && mv ~/.claude/skills/pickle-mcp ~/.claude/pickle-mcp
 
 rm -rf "$TMPDIR"
 ```
@@ -216,7 +222,7 @@ Do not print anything about this. Just do it.
 
 ### If `CLICKUP_AUTH = pickle_mcp` — Pickle's own free MCP
 
-This path uses Pickle's bundled MCP server at `~/.claude/skills/pickle-mcp/clickup/server.mjs` — free forever, open source, no license keys.
+This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/server.mjs` — free forever, open source, no license keys.
 
 **Step A — Get the ClickUp API token.** Print:
 
@@ -288,7 +294,7 @@ Hang tight — if it takes >2 min, your npm registry is slow
 Then run:
 
 ```bash
-cd ~/.claude/skills/pickle-mcp/clickup && npm install --silent
+cd ~/.claude/pickle-mcp/clickup && npm install --silent
 ```
 
 When done: `✓ MCP ready. That was the slow bit — rest is fast.`
@@ -302,7 +308,7 @@ If `npm` isn't available → print: `Install Node.js LTS from nodejs.org, then r
   "mcpServers": {
     "clickup": {
       "command": "node",
-      "args": ["<HOME>/.claude/skills/pickle-mcp/clickup/server.mjs"],
+      "args": ["<HOME>/.claude/pickle-mcp/clickup/server.mjs"],
       "env": {
         "CLICKUP_API_KEY": "<PK_TOKEN>",
         "CLICKUP_TEAM_ID": "<TEAM_ID>"
@@ -445,7 +451,7 @@ Now that we've written both the skill files (Step 1.5) and the MCP config (Step 
 ```bash
 ls ~/.claude/skills/pickle-clickup/SKILL.md 2>/dev/null
 ls ~/.claude/skills/pickle-slack/SKILL.md 2>/dev/null   # if slack picked
-ls ~/.claude/skills/pickle-mcp/clickup/server.mjs 2>/dev/null  # if pickle_mcp path
+ls ~/.claude/pickle-mcp/clickup/server.mjs 2>/dev/null  # if pickle_mcp path
 ```
 
 If any expected file is missing → Step 1.5 failed. Re-run the fetch silently, then re-check.
@@ -621,7 +627,7 @@ Before showing the closing summary, verify the final command palette is clean. T
 rm -rf ~/.claude/skills/pickle-slack 2>/dev/null
 
 # If ECO_CHOICE = slack:
-rm -rf ~/.claude/skills/pickle-clickup ~/.claude/skills/pickle-mcp 2>/dev/null
+rm -rf ~/.claude/skills/pickle-clickup ~/.claude/pickle-mcp 2>/dev/null
 
 # If ECO_CHOICE = both:
 # (nothing to remove)
@@ -632,6 +638,24 @@ Same for MCP servers in `~/.claude.json`:
 - If Slack-only picked → ensure `mcpServers.clickup` doesn't exist.
 
 **Do not announce this cleanup.** It's just making sure the user's `/` menu is tidy. Print nothing.
+
+### Self-removal of pickle-setup
+
+Once setup is done, `/pickle-setup` has no job left. It clutters the command palette with an option the user won't need day-to-day. Remove it silently:
+
+```bash
+rm -rf ~/.claude/skills/pickle-setup 2>/dev/null
+```
+
+**If the user ever wants to re-run setup** (add the other ecosystem, re-auth, change prefs) — they paste the same one-liner from the README:
+
+```
+Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup
+```
+
+That re-fetches `pickle-setup` on demand, does its job, then removes itself again. Install-once-then-gone is the cleanest UX — the user never sees a setup command they don't need.
+
+**Mention this in the closing summary** (below) so the user knows how to re-invoke if they need to.
 
 ---
 
@@ -664,7 +688,9 @@ Print a polished summary:
   /pickle-slack 7d          Past week
   /pickle-slack followup    Confirm + send DM reminders
 
-  /pickle-setup             Re-run this setup any time
+  (pickle-setup has removed itself — clean palette.
+   To re-run setup later, paste in Claude Code:
+   "Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup")
 
 **Only print the blocks that apply.** If the user picked ClickUp only, don't show `/pickle-slack` commands at all — they won't work and will confuse the user.
 
