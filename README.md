@@ -122,58 +122,66 @@ You confirm. It sends. It records what was sent in the ClickUp task.
 | Requirement | Details |
 |-------------|---------|
 | **Claude Code** | Required — [get it here](https://claude.ai/download) |
-| **ClickUp MCP** | Connect once at [claude.ai/settings/connectors](https://claude.ai/settings/connectors) |
 | **ClickUp account** | Any plan (Free, Unlimited, Business) |
-| **OS** | Mac, Linux, or Windows — install happens inside Claude Code |
+| **ClickUp API token** | Generated in ClickUp Settings → Apps (takes 30 seconds) |
+| **Node.js** | Required for the ClickUp MCP server — [nodejs.org](https://nodejs.org) (LTS) |
+| **OS** | Mac, Linux, or Windows |
 
 ---
 
 ## Install — Claude Code Only
 
-No terminal. No scripts. Just paste this into Claude Code:
+No terminal. No scripts. Paste this into Claude Code:
 
 ```
 Install the make-my-clickup skill from https://github.com/adityaarsharma/make-my-clickup
 Clone or download it into ~/.claude/skills/make-my-clickup/
 ```
 
-Claude Code will handle the download and placement automatically.
-
-Then **restart Claude Code** — type `/make-my-clickup` and it appears in autocomplete.
+Claude Code handles the download and placement. Then **restart Claude Code** — type `/make-my-clickup` and it appears in autocomplete.
 
 ---
 
-## Setup: Connect ClickUp MCP
+## Connect ClickUp — 2 Options
 
-The skill runs entirely through the ClickUp MCP connector. Set it up once.
+### Option A — Personal Use (Solo)
+If you use Claude Code with your own account, connect via the official connector:
 
-### Step 1 — Open Claude AI Connectors
+1. Go to [claude.ai/settings/connectors](https://claude.ai/settings/connectors)
+2. Click **Add connector** → search **ClickUp** → **Connect**
+3. Authorise in ClickUp → done
 
-Go to [claude.ai/settings/connectors](https://claude.ai/settings/connectors)
+### Option B — Team Use (Recommended for teams)
+Each person connects their own ClickUp account using a personal API token. No shared Claude account needed. Each person's inbox is private to them.
 
-Must be signed into the same Claude account you use with Claude Code.
+**Takes 2 minutes. Paste this into Claude Code:**
 
-### Step 2 — Add ClickUp
+```
+Run the make-my-clickup setup:
+1. Ask me for my ClickUp API token (starts with pk_)
+2. Add it to ~/.claude.json under mcpServers using @taazkareem/clickup-mcp-server
+3. Verify the connection works by listing my ClickUp workspaces
+```
 
-Click **"Add connector"** → search **ClickUp** → click **Connect**.
+Claude Code will ask for your token, write the config, and verify the connection automatically.
 
-You'll be redirected to ClickUp's OAuth page. Log in and grant access to your workspace.
+> **How to get your API token:** [docs/api-setup.md](docs/api-setup.md) — step-by-step with exact clicks
 
-### Step 3 — Verify It's Working
+**Restart Claude Code once after setup.**
+
+### Verify It's Working
 
 In Claude Code, type:
 ```
 What spaces do I have in ClickUp?
 ```
-If Claude lists your spaces, the connector is live.
+If Claude lists your spaces, the connection is live.
 
-### Step 4 — Run
+### Run
 
 ```
 /make-my-clickup
 ```
-
-> Full MCP setup guide: [docs/clickup-mcp-setup.md](docs/clickup-mcp-setup.md)
 
 ---
 
