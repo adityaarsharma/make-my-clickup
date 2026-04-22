@@ -249,27 +249,61 @@ Print rate-limit summary:
 
 ## STEP 5A — MODE A: MY INBOX
 
-For every message in `ALL_MESSAGES[]`, apply:
+For every message in `ALL_MESSAGES[]`, apply the filter below.
+
+**CRITICAL — DM vs Channel rules are different:**
+
+### 📬 DMs and multi-person DMs (conversation type = `im` or `mpim`)
+In a private conversation that includes me, I am implicitly the audience. **@mention is NOT required.**
+Include ANY message in a DM/mpim that contains:
+- A question ending in `?` (any language)
+- A request, task, or action item — even directed at a colleague in the same DM
+- A pending decision waiting for anyone's confirmation
+- A report or update that needs a response
+- Strategy/planning questions ("what do you think", "any ideas", "plan karo", "kya socha")
+- Suggestions waiting for approval before execution
+
+**Why:** If you're in the DM, every unanswered message in that thread is your concern. Missing these is how real work gets dropped. Pickle's #1 promise: no missed task from any corner.
+
+### 📢 Channels (conversation type = `channel` or `group`)
+In public/team channels, @mention IS the filter.
 
 ### ✅ INCLUDE if ANY of these are true:
 
 1. **Direct @mention** — `text` contains `<@MY_USER_ID>`
-2. **DM to me** — conversation type is `im` AND `user_id != MY_USER_ID` AND no reply from me in the thread
+2. **DM/mpim message** — conversation is `im` or `mpim` AND `user_id != MY_USER_ID` (NO @mention required — see DM rules above)
 3. **Question directed at me** — ends with `?` AND is in DM OR thread where I last spoke OR follows an @mention of me
-4. **Blocker language** — "waiting for you", "need your input", "need your approval", "can you decide", "your call", "blocker"
-5. **My unresolved commitment** — I said "I will…", "I'll do…", "Let me check…" in a thread AND no closure from me afterward
+4. **Blocker language** — "waiting for you", "need your input", "need your approval", "can you decide", "your call", "blocker", "confirm karein", "bata do", "sir confirm"
+5. **My unresolved commitment** — I said "I will", "I'll do", "Let me check", "dekh leta hoon", "main karunga" in a thread AND no closure from me afterward
 6. **Keyword urgent + my area** — "urgent", "blocker", "production", "customer issue" AND context mentions my domain/ownership
+
+### 🌐 Multilingual intent detection (MUST apply — do not just keyword-match)
+
+Slack teams write in Hindi, Gujarati, English, or any mix. Treat these equivalently:
+
+| Meaning | English | Hindi/Hinglish | Gujarati |
+|---------|---------|----------------|----------|
+| Waiting for approval | "once you confirm" | "aap bolo toh karunga", "confirm karein" | "tame confirm karo" |
+| Asking for opinion | "what do you think" | "kya lagta hai", "aap kya sochte ho" | "tame shu vicharcho" |
+| Task request | "please do this" | "yeh karo", "kar do", "ho jayega?" | "aa karo", "thase?" |
+| Asking for update | "any update?" | "kya update hai?", "batao" | "shu update che?" |
+| Question | ends with `?` | ends with `?` or `hain?` or `hai?` | ends with `?` or `che?` |
+| Pending/in-progress | "working on it" | "kar raha hoon", "chal raha hai" | "kari rahyo chhu" |
+
+When a message INTENT matches any row above — include it. Do not skip because the exact English phrase wasn't used.
 
 ### ❌ SKIP unconditionally:
 
 - **Standup posts**: contain "1. Worked on" AND "2. Will work on" (+ optional "3. Blockers/Clear")
-- **Greetings**: "good morning", "gm", "good night", "happy birthday", celebrations, reactji-only messages
-- **FYI announcements**: statements with no question / no request, ending with `.` or `!`
+- **Pure greetings**: "good morning", "gm", "good night", "happy birthday", celebrations, reactji-only messages
+- **Pure FYIs with zero ask**: "FYI — we shipped X" ending with no question, no request
 - **Bot messages**: `subtype: "bot_message"` or `user_id` starts with `B`
 - **My own messages**: `user_id == MY_USER_ID` — UNLESS it's a commitment thread I haven't followed through
-- **Completed**: "done ✓", "shipped", "fixed", "released", "resolved", ":white_check_mark:"
+- **Completed with proof**: "done ✓", "shipped", "fixed [link]", "resolved", ":white_check_mark:" with actual proof
 - **Channel pings**: `<!channel>`, `<!here>`, `<!everyone>` where anyone can respond (not specifically me)
 - **Reactji-only replies**: messages consisting only of emoji
+
+**NOISE RULE:** When in doubt — INCLUDE. A false positive (extra task) is better than a false negative (missed task). You can always remove a task. You cannot un-miss a decision.
 
 ---
 

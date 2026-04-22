@@ -88,6 +88,44 @@ Print:
 
 ---
 
+## STEP 0.5 — LOAD USER PROFILE (personalise scoring)
+
+Read `~/.claude/skills/pickle-setup/prefs.json` if it exists. Extract:
+
+- `user_name` → store as `USER_NAME_PREF` (display name, fallback to ClickUp name later)
+- `user_role` → store as `USER_ROLE` (e.g. "Founder / CEO", "Developer / Engineer")
+- `role_context` → store as `ROLE_CONTEXT` (free-text one-liner describing day-to-day work)
+
+If `prefs.json` is missing or any field blank → proceed normally (defaults to generic scoring). **Never block on missing prefs.**
+
+### Extract `ROLE_KEYWORDS[]` from `ROLE_CONTEXT`
+
+Parse the role-context sentence and pull out **action verbs** and **domain nouns** specific to the user's job. These become boost terms in Step 6 (Priority Scoring).
+
+Example extractions:
+
+| ROLE_CONTEXT | ROLE_KEYWORDS |
+|--------------|---------------|
+| "I approve YouTube titles, blog topics, launches" | approve, title, blog, topic, launch |
+| "I review PRs and handle production incidents" | PR, review, production, incident, bug, deploy |
+| "I close deals and handle partnership requests" | deal, partnership, partner, contract, close |
+| "I design UI components and review Figma" | design, Figma, UI, component, review, mockup |
+
+Also treat synonyms across Hindi/Gujarati/English as equivalent (e.g. "approve" = "approve kar do" = "manjoor karo").
+
+Print:
+```
+🎯 Personalised scoring enabled
+   Role: $USER_ROLE
+   Focus: [$ROLE_KEYWORDS joined, max 8 shown]
+```
+
+If no prefs file → print `🎯 Generic scoring (no role profile — run /pickle-setup to personalise)`.
+
+**Important:** These are SCORING boosts only. Step 5A (include/exclude) ignores role entirely. Nothing is hidden because of role.
+
+---
+
 ## STEP 1 — IDENTIFY USER & WORKSPACE
 
 1. Call `clickup_get_workspace_members` to get all workspace members.
@@ -146,20 +184,19 @@ For every channel returned, inspect its metadata (`last_message_at` / `updated_a
 
 | Signal | Action |
 |--------|--------|
-| `last_message_at` is older than `TIME_CUTOFF_MS` | **Skip entirely** — no messages in window, zero API calls wasted |
-| `last_message_at` is older than **30 days** | Mark `status: dormant` → skip unless user ran with `--include-dormant` |
+| `last_message_at` is older than `TIME_CUTOFF_MS` | **Skip entirely** — no messages in the REQUESTED window, zero API calls wasted |
 | Has unread count > 0 OR mention count > 0 | **Priority scan** — add to front of queue |
 | Channel name matches noise patterns (`random`, `fun`, `memes`, `jokes`, `watercooler`, `gif`, `shitposting`, `off-topic`) | Skip unless user-whitelisted in prefs |
 | Bot-only DM (other party's user id starts with bot prefix OR `is_app: true`) | Skip |
-| I've never sent a message in this channel AND no @mention of me exists | Deprioritise — scan only if scan budget allows |
+| I've never sent a message in this channel AND no @mention of me exists AND `is_dm: false` AND `is_group: false` | Deprioritise — scan only if scan budget allows |
+| DM or group DM (`is_dm: true` OR `is_group: true`) | **ALWAYS scan regardless of my message history** — DMs are private conversations I'm part of |
 
 **Adaptive budget:** If after filtering there are still more than **50 channels**, rank by `last_message_at DESC` and scan top 50 first. If time budget remaining at end, process the rest.
 
 Print:
 ```
 🧠 Smart filter:
-  · [N] channels had no messages in window (skipped)
-  · [N] marked dormant (>30 days inactive)
+  · [N] channels had no messages in the $TIME_LABEL window (skipped)
   · [N] noise channels skipped (random/fun/memes)
   · [N] priority channels (unread/mentions)
   · [N] channels queued for scan
@@ -271,26 +308,62 @@ Print rate-limit summary:
 
 ## STEP 5A — MODE A: MY INBOX (What needs MY action)
 
-For every message in `ALL_MESSAGES[]`, apply this filter:
+For every message in `ALL_MESSAGES[]`, apply this filter.
 
-### ✅ INCLUDE if ANY of these are true:
+**CRITICAL — DM vs Channel rules are different:**
 
-1. **@mention of me** — content contains reference to `MY_USER_ID`, `MY_NAME`, or `@mention` tag pointing at current user (applies to chat messages AND task comments)
-2. **Question directed at me** — message ends with `?` AND is addressed to me (DM, thread where I last spoke, task comment replying to mine, or after an @mention)
-3. **Someone is blocked waiting on me** — contains phrases like "waiting for you", "need your input", "need your approval", "can you decide", "what do you think", "your call"
-4. **My unresolved commitment** — I previously said "I will…", "I'll do…", "Let me…", "I'll check…" in a thread or task comment AND no closure exists from me afterward
-5. **I'm the assigned dev/owner** — source is a task comment on a task where `MY_USER_ID` is assignee AND the comment flags urgency or a blocker
-6. **Task assignment change** — a task comment / system event indicates I was just made assignee or watcher
-7. **Partnership / deal needs my response** — message is in a partnership/deal context and directly asks for my reply or approval
+### 📬 DMs and Group DMs (source_type = `dm` or `group_dm`)
+In a private conversation that includes me, I am implicitly the audience. **@mention is NOT required.**
+Include ANY message in a DM/group DM that contains:
+- A question ending in `?` (any language)
+- A request, task, or action item — even directed at a colleague in the same DM
+- A pending decision waiting for anyone's confirmation
+- A report or update that needs a response
+- Strategy/planning questions ("kya sochna chahiye", "any ideas", "what do you think", "plan karo")
+- Suggestions waiting for approval before execution
+
+**Why:** If you're in the DM, every unanswered message in that thread is your concern. Missing these is how real work gets dropped.
+
+### 📢 Channels and Task Comments (source_type = `channel` or `task_comment` etc.)
+In public/team spaces, @mention IS the filter. Include if ANY of these:
+
+### ✅ INCLUDE if ANY of these are true (all source types):
+
+1. **@mention of me** — content contains reference to `MY_USER_ID`, `MY_NAME`, or @mention tag pointing at me
+2. **Question directed at me** — message ends with `?` AND addressed to me (DM thread / replying to my comment / after @mention)
+3. **Blocked on me** — "waiting for you", "need your input", "need your approval", "can you decide", "what do you think", "your call", "confirm karein", "bata do", "approve karo", "sir confirm", "sir bolo"
+4. **My unresolved commitment** — I said "I will", "I'll do", "dekh leta hoon", "main karunga", "I'll check" AND no closure from me afterward
+5. **I'm assignee on the task** — source is a task comment on a task where `MY_USER_ID` is assignee AND comment flags urgency/blocker
+6. **Task assignment change** — I was just made assignee or watcher
+7. **Partnership / deal** — message asks for my reply or approval in a deal/partnership context
+8. **In DM/group DM: any pending question or decision** — see DM rules above (no @mention needed)
+
+### 🌐 Multilingual intent detection (MUST apply — do not just keyword-match)
+
+Analyse the MEANING of the message, not just keywords. ClickUp teams write in Hindi, Gujarati, and English — often mixed in one sentence. Treat these equivalently:
+
+| Meaning | English | Hindi/Hinglish | Gujarati |
+|---------|---------|----------------|----------|
+| Waiting for approval | "once you confirm" | "aap bolo toh karunga", "confirm karein" | "tame confirm karo" |
+| Asking for opinion | "what do you think" | "kya lagta hai", "aap kya sochte ho" | "tame shu vicharcho" |
+| Task request | "please do this" | "yeh karo", "kar do", "ho jayega?" | "aa karo", "thase?" |
+| Asking for update | "any update?" | "kya update hai?", "batao" | "shu update che?" |
+| Question | ends with `?` | ends with `?` or `hain?` or `hai?` | ends with `?` or `che?` |
+| Pending/in-progress | "working on it" | "kar raha hoon", "chal raha hai" | "kari rahyo chhu" |
+
+When a message INTENT matches any row above — include it. Do not skip because the exact English phrase wasn't used.
 
 ### ❌ SKIP unconditionally:
 
-- **Standup messages**: contain "1. Worked on" AND "2. Will work on" AND ("3. All clear" OR "3. No all clear")
-- **Greetings**: "Good morning", "Good night", "Happy Birthday", birthday wishes, celebrations
-- **FYIs with no ask**: announcements ending without a question or request
-- **My own messages**: `user_id == MY_USER_ID` — unless it's a commitment thread where I haven't followed through
-- **Completed items**: "Done ✓", "Fixed", "Released", "Shipped", "Resolved", "Closed"
-- **Mass group pings**: @followers / @channel / @everyone (not specifically me)
+- **Standup messages**: "1. Worked on" AND "2. Will work on" AND ("3. All clear" OR "3. No all clear")
+- **Pure greetings**: "Good morning", "Good night", "Happy Birthday", birthday-only messages
+- **Pure FYIs with zero ask**: "FYI — we shipped X" ending with no question and no request
+- **My own messages**: `user_id == MY_USER_ID` — unless it's a commitment thread I haven't closed
+- **Completed items with proof**: "Done ✓ [link]", "Shipped", "here's the file [attachment]" — must have actual proof
+- **Mass group pings**: @followers / @channel / @everyone — not specifically for me or team decisions
+- **Reactions-only**: emoji-only replies with no text intent
+
+**NOISE RULE:** When in doubt — INCLUDE. A false positive (extra task) is better than a false negative (missed task). You can always remove a task. You cannot un-miss a decision.
 
 ---
 
@@ -434,14 +507,41 @@ If `FOLLOWUP_MODE = false` → show the grouped list in the final report only. D
 - **NORMAL 🟡**: follow-up this week, peer request with reasonable deadline
 - **LOW ⚪**: nice-to-have, soft acknowledgment, no deadline
 
-### Importance:
+### Importance (generic):
 - +2: sender is CEO / founder / direct manager
 - +1: sender is team lead / senior member
 - +1: impacts product launch, pricing, or external partner
 - +1: more than 2 people waiting
 - −1: user is CC'd but not primary
 
-Final priority = highest tier justified by urgency + importance.
+### 🎯 Role-based boost (personalisation from prefs.json)
+
+On top of the generic score, apply a **+1 boost** when the message aligns with `USER_ROLE` AND contains any `ROLE_KEYWORDS[]`:
+
+| USER_ROLE | What gets boosted (+1) |
+|-----------|------------------------|
+| Founder / CEO | Deals, partnerships, pricing decisions, approvals, external-facing messages, investor/board items, financial commitments |
+| Manager / Team Lead | Team blockers, hiring/performance asks, cross-team coordination, escalations from reports |
+| Developer / Engineer | PR reviews, production incidents, bug escalations, deploy blockers, spec clarifications |
+| Designer / UX | Design reviews, Figma feedback, component decisions, brand approvals |
+| Marketing / Content | Copy approvals, launch timing, title/headline changes, campaign decisions, content reviews |
+| Sales / BD | Deal updates, partner requests, contract asks, quote approvals, intro requests |
+| Customer Success | Escalations, refund asks, churn risks, complaint threads, renewals |
+| QA / Testing | Release blockers, bug verifications, test plan approvals |
+| Product Manager | Spec questions, prioritisation calls, roadmap decisions, scope changes |
+| Operations / Finance / HR | Policy questions, approvals, compliance items, hiring/payroll |
+
+### 🎯 Role-context match (+1 extra)
+
+If the message text contains ANY word from `ROLE_KEYWORDS[]` (extracted from your day-to-day description) → **+1 more**.
+
+Example: If ROLE_CONTEXT = "I approve YouTube titles", and a DM says "sir yeh title confirm karo" — the keyword "title" matches → +1 extra.
+
+### Final score
+
+Final priority tier = base urgency tier → bumped one level UP if (importance_score + role_boosts) ≥ 2, OR if the message crosses multiple boost conditions.
+
+**Floor rule:** Role can only BOOST priority, never lower it below its base tier. Role is a lens, not a veto.
 
 ---
 

@@ -50,6 +50,71 @@ Store as `USER_NAME`.
 
 ---
 
+## STEP 0.5 — YOUR ROLE (so Pickle ranks tasks the way YOU think)
+
+Print:
+
+```
+────────────────────────────────────────────────────
+  One more thing — what's your role?
+────────────────────────────────────────────────────
+
+This isn't a filter — it's a PERSPECTIVE hint. A CEO cares
+about approvals and deals; a dev lead cares about blockers;
+a marketer cares about launches. Pickle uses this to score
+priority, never to hide anything from you.
+
+Pick the closest:
+
+  [1]  🏢 Founder / CEO / Co-founder
+  [2]  📊 Manager / Team Lead
+  [3]  🛠  Developer / Engineer
+  [4]  🎨 Designer / UX
+  [5]  📝 Marketing / Content / Growth
+  [6]  📈 Sales / BD / Partnerships
+  [7]  🤝 Customer Success / Support
+  [8]  🧪 QA / Testing
+  [9]  🎯 Product Manager
+  [10] 💼 Operations / Finance / HR
+  [11] 🌐 Other — type it
+
+  👉 Reply 1–11
+```
+
+Store as `USER_ROLE`.
+
+### Then ask one more short question:
+
+```
+  In 1–2 lines — what do you actually do day-to-day?
+
+  (Example: "I run marketing for WordPress plugins. I approve
+  YouTube titles, blog topics, launches, and final copy before
+  it ships.")
+
+  This helps Pickle spot YOUR language in DMs — if you said
+  "I approve titles", a thread about a title change gets
+  ranked higher automatically.
+
+  👉 Type your answer
+```
+
+Store as `ROLE_CONTEXT`.
+
+**How Pickle uses this (transparent):**
+- Role → shifts which task TYPES rank higher:
+  - Founder/CEO → approvals, deals, partnerships, final calls
+  - Dev → blockers, PR reviews, bug escalations, release items
+  - Marketer → copy approval, launch timing, campaign decisions
+  - PM → spec questions, prioritisation calls
+  - Support → escalations, refunds, customer complaints
+- Role-context → Pickle looks for YOUR exact keywords in messages
+  ("approve", "title", "launch" → boosted for you specifically)
+- **Nothing ever gets hidden.** Role only reorders priority.
+  Every message that needs you is still in the inbox.
+
+---
+
 ## STEP 1 — ECOSYSTEM CHOICE
 
 Print:
@@ -573,6 +638,8 @@ Save user prefs to `~/.claude/skills/pickle-setup/prefs.json`:
 ```json
 {
   "user_name": "...",
+  "user_role": "Founder / CEO",
+  "role_context": "I run marketing for WordPress plugins. I approve YouTube titles, blog topics, launches, and final copy.",
   "ecosystems": ["clickup", "slack"],
   "default_window": "24h",
   "clickup_board_name": "My Task Board",
