@@ -36,22 +36,20 @@ Best for: teams sharing Claude seats · personal + work ClickUp accounts · maxi
 
 ### Step 1 — Generate your API token (30 seconds)
 
-```
-ClickUp
-  └── 👤 Your avatar  (bottom-left)
-        └── ⚙️  Settings
-              └── 🔧 Apps
-                    └── 🔑 API Token → [ Generate ]
-                                            │
-                                            ▼
-                               Copy  pk_xxxxxxxxxxxxxxxx
-```
+**Fastest path — open this URL while logged in:**
+
+👉 **[app.clickup.com/settings/apps](https://app.clickup.com/settings/apps)**
+
+That's the page. Find the **API Token** section → click **Generate** (or **Regenerate**). Copy the token — starts with `pk_`.
+
+**Manual path (if the link above doesn't work for you):**
 
 **1 →** Open [app.clickup.com](https://app.clickup.com)
-**2 →** Click your avatar — bottom-left
-**3 →** Click **Settings** → in sidebar click **Apps**
-**4 →** Find **API Token** → click **Generate** (or **Regenerate** if you already had one)
-**5 →** Copy the token — starts with `pk_`
+**2 →** Click your avatar — **top-right corner**
+**3 →** Click **Settings**
+**4 →** In the left sidebar, click **Apps** *(in some ClickUp versions this is labelled **Integrations** — same page)*
+**5 →** Find the **API Token** section → click **Generate**
+**6 →** Copy the token — starts with `pk_`
 
 > ⚠️ Keep this private. It has full access to your ClickUp account.
 

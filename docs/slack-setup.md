@@ -65,6 +65,7 @@ Pickle needs to read your messages *as you* (not as a bot) so it can see DMs. Ad
   mpim:read
   users:read            ← look up names
   chat:write            ← send DMs (with your confirmation)
+  search:read           ← find mentions + DMs efficiently
   reminders:write       ← set Slack reminders
   lists:read            ← read Slack Lists (if your workspace has Lists enabled)
   lists:write           ← write entries to Slack Lists

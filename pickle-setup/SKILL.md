@@ -135,12 +135,18 @@ Print the visual token guide:
   🔵 ClickUp API Token — 30 seconds
 ────────────────────────────────────────────────────
 
-  1. Open app.clickup.com
-  2. Click your avatar (bottom-left)
-  3. Settings → Apps (in left sidebar)
-  4. Find "API Token" → click Generate
-     (If you already have one, Regenerate works too)
-  5. Copy the token — starts with  pk_xxxxxxxxxxxxxxxx
+  Fastest: open this URL while logged in →
+      https://app.clickup.com/settings/apps
+
+  Or do it manually:
+    1. Open app.clickup.com
+    2. Click your avatar (top-right corner)
+    3. Settings → in the left sidebar click "Apps"
+       (in some ClickUp versions this is labelled
+        "Integrations" — same page)
+    4. Find the "API Token" section → click Generate
+       (If you already have one, Regenerate works too)
+    5. Copy the token — starts with pk_xxxxxxxxxxxxxxxx
 
 👉 Paste your pk_ token below. (I'll never show it back.)
 ```
@@ -204,7 +210,8 @@ Print:
        channels:read      groups:read
        im:read            mpim:read
        users:read         chat:write
-       reminders:write    lists:read    lists:write
+       search:read        reminders:write
+       lists:read         lists:write
   5. Scroll up → "Install to Workspace" → approve
   6. Copy the "User OAuth Token" — starts with  xoxp-
 
