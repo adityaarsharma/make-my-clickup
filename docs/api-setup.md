@@ -1,27 +1,57 @@
-# ClickUp API Token Setup Guide
+# ClickUp API Token Setup
 
-> Part of [make-my-clickup](https://github.com/adityaarsharma/make-my-clickup) — Built and Shipped by Aditya Sharma
-
-This is the **team-friendly setup** — each person connects their own ClickUp account using a personal API token. No shared Claude account needed.
+> Part of [make-my-clickup](https://github.com/adityaarsharma/make-my-clickup) · Built and Shipped by Aditya Sharma
 
 ---
 
-## Step 1 — Generate Your ClickUp API Token
+## Generate Your API Token
 
-1. Open [app.clickup.com](https://app.clickup.com) and log in
-2. Click your **avatar / profile picture** in the bottom-left corner
-3. Click **Settings**
-4. In the left sidebar, click **Apps**
-5. Under **"API Token"** — click **Generate** (or **Regenerate** if one already exists)
-6. Copy the token — it starts with `pk_`
-
-> ⚠️ Keep this token private. It gives full access to your ClickUp account.
+```
+ClickUp App
+    │
+    ▼
+👤 Your Avatar  ←── bottom-left corner
+    │
+    ▼
+⚙️  Settings
+    │
+    ▼
+🔧 Apps  ←── in the left sidebar
+    │
+    ▼
+🔑 API Token  →  [ Generate ]
+    │
+    ▼
+📋 Copy token  ←── starts with  pk_xxxxxxxxxxxxxxxx
+```
 
 ---
 
-## Step 2 — Run the Auto-Setup in Claude Code
+### Step by Step
 
-Open Claude Code and paste this **exactly**:
+**1 →** Open [app.clickup.com](https://app.clickup.com)
+
+**2 →** Click your **profile picture / avatar** — bottom-left of the screen
+
+**3 →** Click **Settings**
+
+**4 →** In the left sidebar → click **Apps**
+
+**5 →** Find **"API Token"** → click **Generate**
+   _(if you already have one, click Regenerate to get a fresh one)_
+
+**6 →** Click **Copy** — your token looks like:
+```
+pk_12345678_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456
+```
+
+> ⚠️ Keep this private — it gives full access to your ClickUp account.
+
+---
+
+## Connect to Claude Code
+
+Once you have your token, paste this into Claude Code:
 
 ```
 Run the make-my-clickup setup:
@@ -31,65 +61,58 @@ Run the make-my-clickup setup:
 ```
 
 Claude Code will:
-- Ask for your `pk_` token
-- Write the config to `~/.claude.json` automatically
-- Test that ClickUp responds correctly
-- Tell you when it's ready
 
-Then **restart Claude Code** once and you're connected.
+```
+  You paste prompt
+       │
+       ▼
+  Claude asks for your pk_ token
+       │
+       ▼
+  You paste your token
+       │
+       ▼
+  Claude writes ~/.claude.json automatically
+       │
+       ▼
+  Claude tests the connection
+       │
+       ▼
+  ✅ Connected — restart Claude Code once
+       │
+       ▼
+  /make-my-clickup  ←── you're live
+```
 
 ---
 
-## Step 3 — Run the Skill
+## For Your Team
+
+Everyone follows the same steps with their **own** ClickUp account.
 
 ```
-/make-my-clickup
+  Teammate A          Teammate B          Teammate C
+  pk_aaaaaa           pk_bbbbbb           pk_cccccc
+      │                   │                   │
+      ▼                   ▼                   ▼
+  Their inbox         Their inbox         Their inbox
+  Their tasks         Their tasks         Their tasks
+  Their board         Their board         Their board
 ```
 
----
-
-## What Gets Added to Your Config
-
-Claude Code will add this to `~/.claude.json` on your machine:
-
-```json
-{
-  "mcpServers": {
-    "clickup": {
-      "command": "npx",
-      "args": ["@taazkareem/clickup-mcp-server"],
-      "env": {
-        "CLICKUP_API_TOKEN": "pk_your_token_here"
-      }
-    }
-  }
-}
-```
-
-This only lives on **your machine**. Your token never leaves your computer.
-
----
-
-## For Each Team Member
-
-Everyone on the team follows the same 3 steps above with their own ClickUp account. Each person gets their own inbox scan, their own task board, their own follow-up tracker.
+No shared accounts. No overlap. Fully isolated.
 
 ---
 
 ## Troubleshooting
 
-**"Command not found: npx"**
-→ Node.js is not installed. Install from [nodejs.org](https://nodejs.org) — pick the LTS version.
-
-**Token not working**
-→ Make sure you copied the full token including `pk_`. Regenerate in ClickUp Settings → Apps if needed.
-
-**Claude Code not seeing ClickUp after setup**
-→ Restart Claude Code fully (quit and reopen, not just a new session).
-
-**Want to switch to a different ClickUp account**
-→ Open `~/.claude.json`, replace the `CLICKUP_API_TOKEN` value with the new token, restart Claude Code.
+| Problem | Fix |
+|---------|-----|
+| `npx: command not found` | Install Node.js from [nodejs.org](https://nodejs.org) (LTS version) |
+| Token not accepted | Make sure you copied the full `pk_` token |
+| ClickUp not showing after setup | Fully quit and reopen Claude Code |
+| Wrong ClickUp account connected | Replace token in `~/.claude.json` → restart Claude Code |
 
 ---
 
-*Back to [main README](../README.md)*
+*Back to [README](../README.md)*

@@ -123,7 +123,7 @@ You confirm. It sends. It records what was sent in the ClickUp task.
 |-------------|---------|
 | **Claude Code** | Required — [get it here](https://claude.ai/download) |
 | **ClickUp account** | Any plan (Free, Unlimited, Business) |
-| **ClickUp API token** | Generated in ClickUp Settings → Apps (takes 30 seconds) |
+| **ClickUp API token** | ClickUp → Avatar → Settings → Apps → Generate (30 seconds) |
 | **Node.js** | Required for the ClickUp MCP server — [nodejs.org](https://nodejs.org) (LTS) |
 | **OS** | Mac, Linux, or Windows |
 
@@ -142,19 +142,29 @@ Claude Code handles the download and placement. Then **restart Claude Code** —
 
 ---
 
-## Connect ClickUp — 2 Options
+## Connect ClickUp
 
-### Option A — Personal Use (Solo)
-If you use Claude Code with your own account, connect via the official connector:
+Each person connects using their own **ClickUp API token** — takes 2 minutes, works for solo and teams.
 
-1. Go to [claude.ai/settings/connectors](https://claude.ai/settings/connectors)
-2. Click **Add connector** → search **ClickUp** → **Connect**
-3. Authorise in ClickUp → done
+```
+  ClickUp → Avatar → Settings → Apps → Generate token (pk_xxx)
+                                              │
+                                              ▼
+                                    Paste into Claude Code
+                                              │
+                                              ▼
+                                    Auto-configured ✅
+```
 
-### Option B — Team Use (Recommended for teams)
-Each person connects their own ClickUp account using a personal API token. No shared Claude account needed. Each person's inbox is private to them.
+**Step 1 — Get your token:**
+> ClickUp → bottom-left avatar → **Settings** → **Apps** → **Generate**
+> Copy the token — starts with `pk_`
 
-**Takes 2 minutes. Paste this into Claude Code:**
+📖 Full visual guide: [docs/api-setup.md](docs/api-setup.md)
+
+---
+
+**Step 2 — Paste this into Claude Code:**
 
 ```
 Run the make-my-clickup setup:
@@ -163,21 +173,23 @@ Run the make-my-clickup setup:
 3. Verify the connection works by listing my ClickUp workspaces
 ```
 
-Claude Code will ask for your token, write the config, and verify the connection automatically.
+Claude Code asks for your token → writes the config → tests it → confirms it's live.
 
-> **How to get your API token:** [docs/api-setup.md](docs/api-setup.md) — step-by-step with exact clicks
+**Restart Claude Code once. Done.**
 
-**Restart Claude Code once after setup.**
+---
 
-### Verify It's Working
+**Step 3 — Verify:**
 
-In Claude Code, type:
 ```
 What spaces do I have in ClickUp?
 ```
-If Claude lists your spaces, the connection is live.
 
-### Run
+If Claude lists your spaces, you're connected.
+
+---
+
+**Step 4 — Run:**
 
 ```
 /make-my-clickup
