@@ -155,27 +155,90 @@ For every message in `ALL_MESSAGES[]`, apply this filter:
 
 ## STEP 5B — MODE B: FOLLOW-UP TRACKER (What others owe me)
 
-Scan `ALL_MESSAGES[]` for messages sent **by me** (`user_id == MY_USER_ID`) that:
+Scan `ALL_MESSAGES[]` for messages sent **by me** (`user_id == MY_USER_ID`) that qualify as delegation.
 
 ### ✅ Qualify as "I asked someone to do work" if:
 
 1. **Assignment language** — I said: "please do", "can you", "could you", "I need you to", "complete this", "let me know", "update me", "share the", "send me", "check and reply", "can you handle" + a specific task or action
-2. **Delegation with deadline** — I mentioned a specific person (tagged or by name) AND gave a task or deadline
-3. **Question I asked** — I asked a direct question to someone and they have NOT replied in the thread
+2. **Delegation with deadline** — I mentioned a specific person AND gave a task or deadline ("submit by Wednesday", "send by EOD", "done before the meeting")
+3. **Recurring commitment** — I asked for regular updates: "daily update", "send every morning", "weekly report", "keep me posted each day"
+4. **Question I asked** — I asked a direct question to someone in a DM or thread
 
-For each qualifying "follow-up needed" item, check:
-- **Has the person replied?** Scan the thread replies. If the person I asked replied with an update, completion, or acknowledgment → SKIP (resolved).
-- **If NO reply** → flag as follow-up needed.
+---
+
+### ⚠️ CRITICAL: "Replied" ≠ "Done"
+
+Scan the thread replies. Classify the person's reply:
+
+**✅ RESOLVED — mark as done ONLY if they sent:**
+- Actual deliverable: file, link, document, report, numbers, screenshot
+- Explicit completion: "done ✓", "sent", "submitted", "completed", "here it is", "shared", "uploaded", "published", "fixed"
+
+**🔄 STILL PENDING — do NOT mark as done if they replied with:**
+- Acknowledgment only: "okay", "sure", "will do", "on it", "noted", "got it", "I'll do it", "working on it", "noted thanks"
+- Partial: "almost done", "in progress", "finishing up" — flag as `status: acknowledged_not_delivered`
+- No reply at all — flag as `status: no_reply`
+
+---
+
+### 📅 Deadline Detection
+
+For each qualifying message, extract deadline language:
+
+| Pattern | Extracted deadline |
+|---------|-------------------|
+| "by Wednesday", "before Friday", "due Thursday" | That weekday |
+| "by EOD", "by end of day" | Today 6pm |
+| "by tomorrow" | Tomorrow |
+| "ASAP", "urgent", "immediately" | Today |
+| "this week" | Friday |
+| "before the [meeting/call/launch]" | Infer from context |
+| No deadline mentioned | No deadline = flag after 1 day no reply |
+
+Compute `deadline_status`:
+- `OVERDUE` — deadline has passed AND no delivery received
+- `DUE_SOON` — deadline within 24 hours AND no delivery yet
+- `PENDING` — no deadline, 1+ days, no delivery
+- `RESOLVED` — delivery confirmed
+
+---
+
+### 🔁 Recurring Commitment Detection
+
+If I asked for recurring updates ("daily", "every morning", "weekly"):
+- Count how many updates they've sent in the expected period
+- If they sent updates before but stopped → `status: recurring_stopped`
+- If they never sent any → `status: recurring_never_started`
+- Expected cadence: "daily" = 1/day, "weekly" = 1/week
+
+Flag the specific gap (e.g. "Missing update for Apr 21, Apr 22").
+
+---
+
+### 🔁 Repeat Follow-up Detection
+
+Check if I already sent a follow-up in the same thread:
+- 0 prior follow-ups → normal remind
+- 1 prior follow-up → slightly firmer tone: "Hi [name], circling back again on this..."
+- 2+ prior follow-ups → do NOT auto-send. Flag to user as `escalation_needed: true` with note: "You've followed up twice. Consider escalating or discussing directly."
+
+---
 
 Store as `FOLLOWUP_ITEMS[]`:
 ```
 {
-  what:     what I asked them to do
-  to_whom:  their name + user_id
-  channel:  channel name + id
-  message_id: the original message id
-  date:     when I asked
-  days_pending: how many days since I asked
+  what:              what I asked them to do
+  to_whom:           their name + user_id
+  channel:           channel name + id
+  message_id:        original message id
+  date_asked:        when I asked
+  days_pending:      days since I asked
+  deadline:          extracted deadline or null
+  deadline_status:   OVERDUE | DUE_SOON | PENDING | RESOLVED
+  reply_status:      no_reply | acknowledged_not_delivered | recurring_stopped | recurring_never_started | resolved
+  prior_followups:   number of follow-ups already sent in thread
+  escalation_needed: true | false
+  followup_priority: HIGH (overdue/recurring missed) | NORMAL (pending) | LOW (due soon, acknowledged)
 }
 ```
 
@@ -187,44 +250,73 @@ If `FOLLOWUP_MODE = true` AND `FOLLOWUP_ITEMS[]` is not empty:
 
 **Do NOT auto-send anything.** First show the user exactly what was found and ask for confirmation.
 
-Print a numbered list of all follow-up items:
+Print a numbered list grouped by urgency:
 
 ```
-📨 FOLLOW-UPS READY TO SEND
+📨 FOLLOW-UPS READY TO SEND — [N] pending
 
-Found [N] pending items where you're waiting on someone:
+🔴 OVERDUE / ESCALATION NEEDED
+  1. → Jordan · "Submit plugin docs" · asked 4 days ago · deadline was Wednesday ✗
+     Status: No reply received · 0 prior follow-ups sent
+     Channel: #dev-team · https://app.clickup.com/...
 
-1. → Jordan (jordan@company.com)
-   Asked: "Can you finish the setup docs by Friday?"
-   Channel: #dev-team · 2 days ago
-   Message: https://app.clickup.com/...
+  2. → Sam · "Daily update" · last update was 2 days ago (recurring stopped)
+     Status: Was sending updates, stopped Apr 20 · 1 follow-up already sent
+     ⚠ You've already followed up once. Recommend: talk directly instead of another message.
+     Channel: DM · https://app.clickup.com/...
 
-2. → Sam
-   Asked: "Please update the pricing page and let me know"
-   Channel: DM · 5 hours ago
-   Message: https://app.clickup.com/...
+🟡 PENDING / ACKNOWLEDGED NOT DELIVERED
+  3. → Morgan · "Send banner sizes" · asked 2 days ago
+     Status: Said "on it" Apr 20 but no file received
+     Channel: #design-team · https://app.clickup.com/...
 
-...
-
-Which ones should I send follow-up reminders for?
-Reply with numbers (e.g. "1, 3"), "all", or "none" to skip.
+Which ones should I send reminders for?
+Reply with numbers (e.g. "1, 3"), "all", or "none".
+Note: item 2 is flagged for escalation — I'll skip auto-send for that one unless you say include it.
 ```
 
-Wait for the user's reply. Then:
-- Send `clickup_send_chat_message` only for confirmed items
-- Message template:
-  ```
-  Hey [name] 👋 — just following up on this. Could you share an update on [what was asked]? Thanks!
-  ```
-- Rules:
-  - Only send if `days_pending >= 1`
-  - Only once per item (check thread for recent follow-ups first)
-  - Professional tone, never pushy
-- Print: `📨 Follow-up sent to [name] in [channel]` for each sent
-- Print: `⏭ Skipped [name] — not selected` for skipped items
-- Update the ClickUp task description to note the follow-up was sent
+Wait for user's reply. Then for each confirmed item:
 
-If `FOLLOWUP_MODE = false` → list items in the report only. Do not ask or send anything.
+**Message templates by situation:**
+
+- **First follow-up, no reply:**
+  ```
+  Hey [name] 👋 — just following up on [task]. Could you share an update? Thanks!
+  ```
+
+- **First follow-up, deadline passed:**
+  ```
+  Hi [name] — the deadline for [task] was [date]. Could you update me on the status? Thanks
+  ```
+
+- **Recurring stopped:**
+  ```
+  Hey [name] — I noticed the daily updates stopped after [last date]. Can you resume and send today's update? Thanks!
+  ```
+
+- **Acknowledged but no delivery:**
+  ```
+  Hi [name] — following up on [task] — you mentioned you'd handle it. Could you share the update/file? Thanks
+  ```
+
+- **Second follow-up (firmer):**
+  ```
+  Hi [name] — circling back on this again. [task] is still pending. Please update me today. Thanks
+  ```
+
+- **`escalation_needed: true`** → Do NOT send. Instead, print:
+  ```
+  ⚠ [name] — [task] — You've already followed up [N] times. Recommend discussing directly rather than another message.
+  ```
+
+Rules:
+- Only send if `days_pending >= 1`
+- Update the ClickUp task description to record the follow-up sent + timestamp
+- Print: `📨 Sent to [name] — [template type]` for each sent
+- Print: `⏭ Skipped [name]` for not selected
+- Print: `⚠ Escalation flagged: [name]` for escalation items
+
+If `FOLLOWUP_MODE = false` → show the grouped list in the final report only. Do not ask or send.
 
 ---
 
@@ -295,31 +387,47 @@ description:
 
 ### For MODE B (Follow-up) items:
 
+**Priority rules:**
+- `OVERDUE` or `escalation_needed` or `recurring_stopped` → priority `high`
+- `acknowledged_not_delivered` or `DUE_SOON` → priority `normal`
+- `no_reply` < 2 days → priority `normal`
+
+**Due date rules:**
+- `OVERDUE` → today (already late)
+- `DUE_SOON` → actual deadline date
+- `PENDING` → today + 1 day
+- `recurring_stopped` → today
+
 Call `clickup_create_task`:
 ```
 list_id:   TASK_BOARD_ID
-name:      Follow up: [what was asked] → [their name] (max 80 chars)
-priority:  normal (or high if days_pending >= 3)
-due_date:  today
+name:      [emoji] Follow up → [their name]: [what was asked] (max 80 chars)
+           🔴 if overdue/escalation, 🟡 if pending/acknowledged
+priority:  [see rules above]
+due_date:  [see rules above]
 assignees: [MY_USER_ID]
 tags:      ["make-my-clickup", "follow-up"]
 description:
-  📍 PENDING FROM: [their name]
+  📍 WAITING ON: [their name]
   Thread: https://app.clickup.com/[WORKSPACE_ID]/chat/r/[channel_id]/t/[message_id]
-  I asked on: [date] ([days_pending] days ago)
+  Asked on: [date] ([days_pending] days ago)
 
   📝 WHAT I ASKED
   "[my original message quote]"
 
-  ⏳ STATUS
-  No reply received yet.
-  [If FOLLOWUP_MODE: "✅ Auto follow-up sent on [today's date]"]
-  [If not FOLLOWUP_MODE: "⚠ Run /make-my-clickup followup to auto-send a reminder"]
+  ⏳ STATUS: [one of the following]
+  ❌ No reply received — [days_pending] days with no response
+  🔁 Recurring stopped — last update was [date], expected [cadence]
+  💬 Acknowledged but not delivered — they said "[their reply]" but no deliverable received
+  🔴 OVERDUE — deadline was [date], nothing received
+  ⚠ Escalation needed — already followed up [N] times, consider direct conversation
+
+  📅 DEADLINE: [deadline or "none given"]
 
   📋 OPTIONS
-  • Reply in thread manually
-  • Run /make-my-clickup followup to send auto-reminder
-  • Close this task if already resolved offline
+  • Reply in the thread directly
+  • Run /make-my-clickup [time] followup to send a reminder
+  • Mark task complete if resolved offline
 
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🛠 make-my-clickup · by Aditya Sharma
