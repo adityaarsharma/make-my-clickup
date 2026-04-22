@@ -183,31 +183,28 @@ async function handleTool(name, args) {
     }
 
     case "slack_list_create": {
-      // Slack Lists API — POST lists.create
-      // Columns: Title(text), Type(select), Priority(select), From/To(text),
-      //          Channel(text), Source Link(link), Due(date), Status(select), Quote(text)
-      const data = await slackCall("lists.create", {
-        name: args.name,
-        schema: {
-          columns: [
-            { name: "Title",       type: "text" },
-            { name: "Type",        type: "select",  options: [{ value: "Inbox" }, { value: "Follow-up" }] },
-            { name: "Priority",    type: "select",  options: [
-              { value: "🔴 Urgent" }, { value: "🟠 High" },
-              { value: "🟡 Normal" }, { value: "⚪ Low" }
-            ]},
-            { name: "From/To",     type: "text" },
-            { name: "Channel",     type: "text" },
-            { name: "Source Link", type: "link" },
-            { name: "Due",         type: "date" },
-            { name: "Status",      type: "select",  options: [
-              { value: "Open" }, { value: "Waiting" }, { value: "Done" }
-            ]},
-            { name: "Quote",       type: "text" },
-          ],
-        },
-      });
-      return { list_id: data.list?.id || data.id, name: args.name };
+      // Slack Lists API — try multiple payload shapes; the API is not fully public-documented.
+      // Attempt 1: name + channel_id (lists are channel-scoped in Slack UI)
+      // Attempt 2: name only
+      // Attempt 3: give up and return null so caller can fall back to self_dm
+
+      const attempts = [
+        { name: args.name, channel_id: args.channel_id || null },
+        { name: args.name },
+        { title: args.name },
+      ].filter(p => Object.values(p).every(v => v !== null));
+
+      let lastErr = null;
+      for (const payload of attempts) {
+        try {
+          const data = await slackCall("lists.create", payload);
+          const list_id = data.list?.id || data.id || data.list_id;
+          if (list_id) return { list_id, name: args.name };
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr || new McpError(ErrorCode.InternalError, "lists.create failed all attempts");
     }
 
     case "slack_list_find_or_create": {
