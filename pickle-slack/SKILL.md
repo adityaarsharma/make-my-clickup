@@ -436,7 +436,22 @@ Channel:     #[channel] or DM
 Source Link: [permalink]
 Due:         URGENT=today · HIGH=tomorrow · NORMAL=end of week · LOW=next week
 Status:      Open
-Quote:       "[exact 1-3 sentence quote]"
+Quote:       [Full ClickUp-style context block — see format below]
+```
+
+**Quote field format** (write this every time — not a one-liner, a real description):
+```
+From: @[sender] in #[channel] · [date]
+Message: "[verbatim or near-verbatim excerpt — the actual thing they said]"
+Context: [1-2 sentences of background — why this matters, what project/client this relates to]
+Action needed: [exactly what Aditya needs to do — be specific, not "review this"]
+```
+Example:
+```
+From: @Mehul in #rc-design · Apr 22
+Message: "Can you check the layout system V01 in Figma? Added the spacing tokens and nav variants — need your sign-off before we hand to dev."
+Context: RunCloud homepage redesign project. Mehul is the lead designer. This is the first layout system draft — dev handoff is blocked on your approval.
+Action needed: Open Figma, review spacing tokens + nav variants, leave comments or approve so Mehul can proceed to dev handoff.
 ```
 
 **2. Set a Slack reminder** for yourself via `reminders.add`:
@@ -463,10 +478,43 @@ Channel:     #[channel] or DM
 Source Link: [permalink to my original message]
 Due:         [above]
 Status:      Waiting (no_reply / acknowledged_not_delivered / recurring_stopped / OVERDUE / escalation_needed)
-Quote:       "[my original message quote]"
+Quote:       [Full ClickUp-style context block — same format as Inbox above]
+```
+Quote example for Follow-up:
+```
+To: @Alex in #growth · originally asked Apr 16
+Message: "Hey Alex, any thoughts on the RunCache audit doc I shared? Let me know if the positioning angles work."
+Context: RunCache product audit — Alex hasn't replied in 6 days. Positioning decisions needed before copy can proceed.
+Action needed: Chase Alex for feedback on the audit doc. If no reply by Apr 25, escalate or decide unilaterally.
 ```
 
 Plus a Slack reminder to self for the due date.
+
+### Step 8.5 — Send completion DM to self
+
+After ALL list items and reminders are created, post a self-DM notification via `slack_post_self_dm` so the user gets a Slack ping without having to look for the List:
+
+```
+🥒 Pickle done — [N] items added to your Slack List
+
+🔴 Urgent ([N])  🟠 High ([N])  🟡 Normal ([N])  ⚪ Low ([N])
+
+[For each HIGH+ item:]
+• [title] → [permalink]
+
+🔗 Full list: slack://app.slack.com/lists/[LIST_ID]
+⏰ Reminders set for each item.
+
+Mark items Done when handled. Done items are auto-cleaned from the list after 24h via /pickle-slack cleanup.
+```
+
+This is a **notification only** — the Slack List is still the primary record. If List creation failed entirely, do NOT fall back to DM-as-inbox. Report the error instead.
+
+### Archive / Done cleanup rule
+
+- When you mark an item **Done** in the Slack List, it stays visible for 24 hours then should be removed.
+- To clean up Done items, run: `/pickle-slack cleanup` (future command — will call `slack_list_item_delete` for Done items older than 24h).
+- Status grouping in the List UI: open the List → click **Group by Status** to see Open / Waiting / Done sections separately.
 
 ---
 

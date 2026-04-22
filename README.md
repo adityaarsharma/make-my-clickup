@@ -7,7 +7,7 @@
 **Every morning, 600 messages. 15 actually need you. Pickle finds them.**
 **100% free. Runs locally. No server, no subscription, no license keys.**
 
-[![Version](https://img.shields.io/badge/version-1.0-blue?style=flat-square)](https://github.com/adityaarsharma/pickle)
+[![Version](https://img.shields.io/badge/version-1.5-blue?style=flat-square)](https://github.com/adityaarsharma/pickle)
 [![Claude Code](https://img.shields.io/badge/runs%20in-Claude%20Code-orange?style=flat-square)](https://claude.ai/download)
 [![Built by](https://img.shields.io/badge/built%20by-Aditya%20Sharma-purple?style=flat-square)](https://x.com/adityaarsharma)
 
@@ -88,9 +88,21 @@ Paste this one line into Claude Code:
 Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup
 ```
 
-That's it. Claude Code fetches only **`pickle-setup`** — nothing else. The wizard asks if you want ClickUp, Slack, or both, then pulls exactly the skills you need (and only those) from the repo. Pick ClickUp-only and you never download the Slack skill. ~3 minutes.
+> **GitHub repo:** [github.com/adityaarsharma/pickle](https://github.com/adityaarsharma/pickle)
 
-**100% free.** Pickle ships its own open-source ClickUp MCP (`pickle-mcp/clickup/`) — no paid dependencies, no license keys, no rate limits. Slack uses the official free OAuth connector or your own free Slack app — your choice.
+That's it. Claude Code fetches only **`pickle-setup`** from the repo — nothing else yet. The wizard asks if you want ClickUp, Slack, or both, then pulls exactly the skills you need (and only those). Pick ClickUp-only and you never download the Slack skill. ~3 minutes total.
+
+**Setup is one-time only.** Once `/pickle-setup` completes, you never run it again — it self-removes from your session. From then on, just use:
+```
+/pickle-clickup     → your ClickUp inbox
+/pickle-slack       → your Slack inbox
+```
+
+**100% free.** Pickle ships its own open-source MCPs:
+- `pickle-mcp/clickup/` — ClickUp tasks, comments, docs, reminders
+- `pickle-mcp/slack/` — Slack Lists, reminders, DMs
+
+No paid dependencies. No license keys. No rate limits beyond Slack/ClickUp's own APIs.
 
 ---
 
