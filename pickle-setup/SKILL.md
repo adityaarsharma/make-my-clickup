@@ -160,6 +160,7 @@ Skills map:
 - `clickup` → need `pickle-clickup` (skill) + `pickle-mcp/clickup` (MCP server — NOT a skill)
 - `slack` → need `pickle-slack` (skill)
 - `both` → all three
+- **ALWAYS install `pickle-update`** (the one-command updater skill) regardless of ecosystem choice — it's how users get future versions without touching a terminal.
 
 **Important placement:** `pickle-mcp/` is an MCP server, not a Claude skill — it has no `SKILL.md`. It belongs in `~/.claude/pickle-mcp/`, NOT in `~/.claude/skills/`. Putting it under `skills/` clutters the folder with something that isn't a skill.
 
@@ -189,6 +190,8 @@ mkdir -p ~/.claude/skills
 # Skills go under ~/.claude/skills/ (they have SKILL.md)
 if clickup needed → cp -R "$TMPDIR/pickle-clickup" ~/.claude/skills/
 if slack needed   → cp -R "$TMPDIR/pickle-slack"   ~/.claude/skills/
+# Always ship the updater skill so the user can run /pickle-update later
+cp -R "$TMPDIR/pickle-update" ~/.claude/skills/
 
 # MCP server lives OUTSIDE skills/ (not a skill, just Node code)
 if clickup needed (token path) → cp -R "$TMPDIR/pickle-mcp" ~/.claude/pickle-mcp
@@ -642,13 +645,15 @@ Show the output.
 
 Before showing the closing summary, verify the final command palette is clean. The user picked exactly one (or both) ecosystems — anything outside that pick should NOT be installed.
 
-**Expected end state:**
+**Expected end state (after `/pickle-setup` self-removes at end of Step 7.5):**
 
 | User picked | Skills that must be on disk | Skills that must NOT exist |
 |-------------|------------------------------|-----------------------------|
-| ClickUp only | `pickle-setup`, `pickle-clickup`, `pickle-mcp` (if token path) | `pickle-slack` |
-| Slack only   | `pickle-setup`, `pickle-slack` | `pickle-clickup`, `pickle-mcp` |
-| Both         | all four                       | — |
+| ClickUp only | `pickle-clickup`, `pickle-update`, `pickle-mcp` (if token path) | `pickle-slack`, `pickle-setup` |
+| Slack only   | `pickle-slack`, `pickle-update` | `pickle-clickup`, `pickle-mcp`, `pickle-setup` |
+| Both         | `pickle-clickup`, `pickle-slack`, `pickle-update`, `pickle-mcp` (if token path) | `pickle-setup` |
+
+**The `pickle-update` skill stays forever** — it's how the user gets future versions without terminal commands. Never delete it during cleanup.
 
 **Silently enforce this.** Run:
 
@@ -723,6 +728,9 @@ Print a polished summary:
   /pickle-slack 7d          Past week
   /pickle-slack followup    Confirm + send DM reminders
 
+  [Always show:]
+  /pickle-update            Update Pickle to the latest version
+
   (pickle-setup has removed itself — clean palette.
    To re-run setup later, paste in Claude Code:
    "Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup")
@@ -736,8 +744,7 @@ Print a polished summary:
   🔒 Pickle always asks before sending a follow-up.
   🔒 Your tokens stay in ~/.claude.json on this machine only.
 
-  To update Pickle later:
-    bash ~/.claude/pickle-mcp/update.sh
+  To update Pickle later → just run /pickle-update
 
 ────────────────────────────────────────────────────
   🥒 Built and Shipped by Aditya Sharma

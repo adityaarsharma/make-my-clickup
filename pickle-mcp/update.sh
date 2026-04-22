@@ -16,14 +16,16 @@ REPO_URL="https://github.com/adityaarsharma/pickle.git"
 HAS_CLICKUP_SKILL=0
 HAS_SLACK_SKILL=0
 HAS_SETUP_SKILL=0
+HAS_UPDATE_SKILL=0
 HAS_CLICKUP_MCP=0
 
 [ -f "$SKILLS_DIR/pickle-clickup/SKILL.md" ] && HAS_CLICKUP_SKILL=1
 [ -f "$SKILLS_DIR/pickle-slack/SKILL.md" ]   && HAS_SLACK_SKILL=1
 [ -f "$SKILLS_DIR/pickle-setup/SKILL.md" ]   && HAS_SETUP_SKILL=1
+[ -f "$SKILLS_DIR/pickle-update/SKILL.md" ]  && HAS_UPDATE_SKILL=1
 [ -f "$PICKLE_MCP_DIR/clickup/server.mjs" ]  && HAS_CLICKUP_MCP=1
 
-if [ "$HAS_CLICKUP_SKILL" -eq 0 ] && [ "$HAS_SLACK_SKILL" -eq 0 ] && [ "$HAS_SETUP_SKILL" -eq 0 ]; then
+if [ "$HAS_CLICKUP_SKILL" -eq 0 ] && [ "$HAS_SLACK_SKILL" -eq 0 ] && [ "$HAS_SETUP_SKILL" -eq 0 ] && [ "$HAS_UPDATE_SKILL" -eq 0 ]; then
   echo ""
   echo "❌ Pickle isn't installed. Run this first:"
   echo "   /pickle-setup"
@@ -40,6 +42,7 @@ echo ""
 echo "Detected on this machine:"
 [ "$HAS_CLICKUP_SKILL" -eq 1 ] && echo "   ✓ pickle-clickup (ClickUp inbox scanner)"
 [ "$HAS_SLACK_SKILL"   -eq 1 ] && echo "   ✓ pickle-slack (Slack inbox scanner)"
+[ "$HAS_UPDATE_SKILL"  -eq 1 ] && echo "   ✓ pickle-update (one-command updater)"
 [ "$HAS_CLICKUP_MCP"   -eq 1 ] && echo "   ✓ pickle-mcp/clickup (free MCP server)"
 [ "$HAS_SETUP_SKILL"   -eq 1 ] && echo "   ✓ pickle-setup (onboarding wizard)"
 echo ""
@@ -111,7 +114,7 @@ fi
 # ── Update skills (only the ones user has) ──────────────────────
 echo ""
 echo "⏳ [3/4] Updating skill files ..."
-for skill in pickle-setup pickle-clickup pickle-slack; do
+for skill in pickle-setup pickle-update pickle-clickup pickle-slack; do
   if [ -d "$SKILLS_DIR/$skill" ] && [ -d "$TMPDIR/$skill" ]; then
     cp -R "$TMPDIR/$skill/." "$SKILLS_DIR/$skill/"
     echo "   ✓ $skill"
