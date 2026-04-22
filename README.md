@@ -6,7 +6,7 @@
 
 **Scan every channel, DM, and group chat. Extract what needs YOU. Track what you're waiting on. One command.**
 
-[![Version](https://img.shields.io/badge/version-2.0-blue?style=flat-square)](https://github.com/adityaarsharma/pickle)
+[![Version](https://img.shields.io/badge/version-1.0-blue?style=flat-square)](https://github.com/adityaarsharma/pickle)
 [![Claude Code](https://img.shields.io/badge/runs%20in-Claude%20Code-orange?style=flat-square)](https://claude.ai/download)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Built by](https://img.shields.io/badge/built%20by-Aditya%20Sharma-purple?style=flat-square)](https://x.com/adityaarsharma)
@@ -314,21 +314,11 @@ All logic is plain English. Edit `SKILL.md` directly — no code.
 
 ---
 
-## Roadmap
-
-- ✅ v1.x — make-my-clickup (ClickUp only)
-- ✅ v2.0 — Pickle: ClickUp + Slack, dual-path auth, context memory, escalation guard
-- 🔜 v2.1 — Meeting prep mode (`/pickle-clickup prep jordan`)
-- 🔜 v2.2 — Weekly review format
-- 🔜 v2.3 — Scheduled runs via Claude Code Routines (template commands shipped)
-
----
-
 ## Contributing
 
 PRs welcome. Open an issue for bugs or feature requests.
 
-**MIT licensed.** Pickle is free. Will stay free.
+**MIT licensed. Free forever.** No paid tier, no hosted SaaS, no telemetry, no lock-in. Pickle is a Claude Code skill you install on your own machine — that's the entire product.
 
 ---
 

@@ -94,45 +94,111 @@ Print: `📋 Destination: [Slack List / Canvas / DM-to-self] — [ID] ✓`
 
 ---
 
-## STEP 3 — DYNAMIC CONVERSATION DISCOVERY
+## STEP 3 — DYNAMIC SOURCE DISCOVERY
 
-**Never use hardcoded channel IDs.** Discover dynamically.
+**Never use hardcoded IDs.** Cover every Slack surface a conversation can hit.
 
-Call `conversations.list` (or MCP equivalent):
+### 3A — Conversations I'm in
+
+Call `conversations.list`:
 - `types`: `public_channel,private_channel,mpim,im`
 - `exclude_archived`: true
 - `limit`: 200
 
-Paginate with `cursor`. Keep only conversations where the user is a member (`is_member: true` for channels, or DMs/MPIMs which inherently include the user).
+Paginate with `cursor`. Keep only conversations where I'm a member (`is_member: true` for channels; DMs/MPIMs inherently include me).
 
 Categorise:
-- **Channels** — `public_channel` + `private_channel` where `is_member: true`
+- **Public channels** — `public_channel` where `is_member: true`
+- **Private channels** — `private_channel` where `is_member: true`
 - **DMs** — `im` (1:1)
 - **Group DMs** — `mpim` (multi-person)
 
-Print: `🔍 Discovered: [N] channels · [N] DMs · [N] group DMs`
+### 3B — Unread fast-path
+
+If MCP exposes `conversations_unreads`, call it for the list of conversations with unread messages. Merge with 3A — scan unread ones first.
+
+### 3C — @Mentions & keyword search (catches channels I forget)
+
+Use `search.messages` with queries scoped to the time window. **Rate cap:** `search.messages` is Tier 2 (20 req/min) — stay under 5 search calls total per run.
+
+| Query | Catches |
+|-------|---------|
+| `<@MY_USER_ID> after:[YYYY-MM-DD]` | Every explicit @mention of me anywhere |
+| `to:@me after:[YYYY-MM-DD]` | DMs to me (backup for 3A) |
+| `from:@me is:thread after:[YYYY-MM-DD]` | Threads I participated in — catches replies after I posted |
+| `has:file to:@me after:[YYYY-MM-DD]` | Files shared specifically with me |
+
+Collect every `(channel_id, ts)`. **Dedupe against 3A** — a mention also returned by `conversations.history` is one item, not two.
+
+### 3D — Slack Lists assignments
+
+If Lists API is available, call `lists.items.list` for each List I have access to, filter items where `assignee` includes `MY_USER_ID` AND `due_date` within window OR `updated_at >= TIME_CUTOFF_SEC`. Store as `LIST_ASSIGNMENTS[]` — these are existing task-style items awaiting my action.
+
+### 3E — Unread fast-path
+
+If MCP exposes `conversations_unreads`, prioritise unread channels in the scan order (they're more likely to contain fresh action items).
+
+Print:
+```
+🔍 Discovered:
+  · [N] public channels  · [N] private channels
+  · [N] DMs  · [N] group DMs
+  · [N] @mentions via search  · [N] list assignments
+```
 
 ---
 
-## STEP 4 — SCAN ALL SOURCES (PARALLEL)
+## STEP 4 — SCAN ALL SOURCES (PARALLEL + RATE-SAFE)
 
-Scan all discovered conversations in parallel batches of 6.
+**API safety rules (hard limits):**
+- Parallel batch size: **8 requests** for `conversations.history/replies` (Tier 3: 50+/min)
+- Parallel batch size: **2 requests** for `search.messages` (Tier 2: 20/min) with 3s spacing between waves
+- On HTTP 429 → honor `Retry-After` header · max 3 retries · then skip source
+- Pagination hard cap: **10 pages per conversation** (10 × 200 = 2000 messages max)
+- Per-conversation cutoff: stop paginating when oldest message returned is older than `TIME_CUTOFF_SEC`
+- Total run time cap: **120s** · print warning and proceed with partial data if hit
+- **Never** call `chat.getPermalink` per message — construct the permalink: `https://[team].slack.com/archives/[channel_id]/p[ts_without_dot]` (saves N API calls)
 
-For each conversation, call `conversations.history`:
+### 4A — Conversation history
+
+For each discovered conversation, call `conversations.history`:
 - `channel`: conversation ID
 - `oldest`: `TIME_CUTOFF_SEC`
 - `limit`: 200
 
-For each message where `thread_ts` exists OR `reply_count > 0` → also call `conversations.replies` to fetch the thread.
+Early-exit when `has_more: false` OR oldest message ts older than cutoff.
 
-On errors (e.g. `not_in_channel`, `missing_scope`) → skip that conversation, add to `ERRORS[]`, continue.
+### 4B — Thread replies (batched)
 
-Build `ALL_MESSAGES[]` with fields:
-- `ts` (message ID), `channel_id`, `channel_name`, `user_id`, `text`, `thread_ts`, `reply_count`, `permalink`
+Collect every parent message with `reply_count > 0` across all conversations first, then batch-fire `conversations.replies` in parallel groups of 8. Don't serialize per-conversation.
 
-Compute `permalink` via `chat.getPermalink` or construct: `https://[team].slack.com/archives/[channel_id]/p[ts_without_dot]`.
+### 4C — Mention-only messages (from 3C)
 
-Print: `✓ [channel-name] — [N] in window` per conversation.
+For each `(channel_id, ts)` from 3C not already covered in 4A/4B, batch-fetch with `conversations.replies` (parallel 8).
+
+### 4D — List assignments
+
+Already fetched in 3D — synthesise into `ALL_MESSAGES[]` as `source_type: list_assignment` with `content = item.title`, `user_id = item.created_by`.
+
+On errors (`not_in_channel`, `missing_scope`, `channel_not_found`, `ratelimited`, `team_not_found`) → log, skip, continue. Never fail the whole run.
+
+Build unified `ALL_MESSAGES[]` with:
+- `source_type`: `public_channel` | `private_channel` | `dm` | `group_dm` | `mention_search` | `thread_reply` | `list_assignment` | `file_shared`
+- `ts`, `channel_id`, `channel_name`, `user_id`, `text`, `thread_ts`, `reply_count`, `files`, `permalink`
+
+Print per source type:
+```
+✓ #channel-name       — [N] in window
+✓ DM: Jordan          — [N] in window
+✓ mpim: design-crit   — [N] in window
+✓ Mentions search     — [N] extra messages
+✓ List assignments    — [N] items
+```
+
+Print rate-limit summary:
+```
+⚡ API calls: [N] Slack requests · [N] retries (with backoff) · [N] sources skipped
+```
 
 ---
 

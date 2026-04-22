@@ -95,9 +95,11 @@ Print: `📋 Task board ready: [list name] (ID: $TASK_BOARD_ID) — personal spa
 
 ---
 
-## STEP 3 — DYNAMIC CHANNEL DISCOVERY
+## STEP 3 — DYNAMIC SOURCE DISCOVERY
 
-**Never use hardcoded channel IDs.** Discover dynamically.
+**Never use hardcoded IDs.** Discover every surface where ClickUp carries a conversation:
+
+### 3A — Chat channels, DMs, group DMs
 
 Call `clickup_get_chat_channels`:
 - `workspace_id`: `$WORKSPACE_ID`
@@ -105,34 +107,112 @@ Call `clickup_get_chat_channels`:
 - `include_closed`: false
 - `limit`: 50
 
-Paginate with `cursor` until `has_more: false`. Collect all channels.
+Paginate with `cursor` until `has_more: false`. Categorise:
+- **Channels** — named public/team channels (`is_dm: false`, `is_group: false`)
+- **DMs** — 1:1 direct messages (`is_dm: true`)
+- **Group DMs** — multi-person group chats (`is_group: true`)
 
-Categorise by type:
-- **Channels** — named public/team channels
-- **DMs** — 1:1 direct messages
-- **Group DMs** — multi-person group chats
+### 3B — Tasks where I'm involved (comments live here)
 
-Print: `🔍 Discovered: [N] channels · [N] DMs · [N] group DMs`
+Call `clickup_filter_tasks` with:
+- **Assignees includes `MY_USER_ID`** → I'm assigned
+- **Watchers includes `MY_USER_ID`** → I'm watching (often because I was @mentioned)
+- `date_updated_gt`: `TIME_CUTOFF_MS` — only tasks that changed in window
+- `include_closed`: false
+- `subtasks`: true
+- `page_size`: 100 · paginate with `page` until empty
+- **Hard cap**: stop at 500 tasks (if >500, log warning — user should narrow window)
+
+Build `ACTIVE_TASKS[]` with `task_id`, `name`, `list_id`, `url`, `date_updated`, `date_created`, `description`.
+
+### 3C — Reminders set for me
+
+Call `clickup_search_reminders` with `assignee_id: MY_USER_ID` (or equivalent). Collect any reminder where `date >= TIME_CUTOFF_MS` that was set by someone OTHER than me. Store as `INCOMING_REMINDERS[]` — these are flagged directly as inbox items.
+
+### 3D — Docs I own or was mentioned in (best-effort)
+
+If the MCP exposes `clickup_list_document_pages` or `clickup_search` with a document scope, search for documents updated within window where `MY_USER_ID` is an author or mentioned. This is best-effort — skip silently if tools unavailable. Store as `ACTIVE_DOCS[]`.
+
+Print:
+```
+🔍 Discovered:
+  · [N] channels  · [N] DMs  · [N] group DMs
+  · [N] active tasks (assigned or watching)
+  · [N] incoming reminders
+  · [N] docs with activity (if available)
+```
 
 ---
 
-## STEP 4 — SCAN ALL SOURCES (PARALLEL)
+## STEP 4 — SCAN ALL SOURCES (PARALLEL + RATE-SAFE)
 
-Scan all discovered channels in parallel batches of 6.
+**API safety rules (hard limits):**
+- Parallel batch size: **6 requests at a time** (ClickUp's per-token limit is ~100/min)
+- On HTTP 429 → exponential backoff: wait 2s, then 4s, then 8s · max 3 retries · then skip source
+- Pagination hard cap: **20 pages per source** (20 × 50 = 1000 messages max per channel/task)
+- Time cap: if total scan time exceeds **120s**, print a warning and proceed with what was fetched
+- Early-exit: if a page returns `next_cursor: null` OR 0 messages in window → stop paginating that source
 
-For each channel, call `clickup_get_chat_channel_messages` with `limit: 50`.
+### 4A — Chat channel messages (+ replies)
 
-For each message:
-- If `date < TIME_CUTOFF_MS` → older than window, stop paginating this channel
-- If `date >= TIME_CUTOFF_MS` → collect for analysis
-- If `has_replies: true` → also call `clickup_get_chat_message_replies` for the full thread
+For each channel/DM/group DM, call `clickup_get_chat_channel_messages` with `limit: 50`.
 
-On connector errors → skip that channel, add name to `ERRORS[]`, continue.
+Per message:
+- `date < TIME_CUTOFF_MS` → stop paginating this channel (messages are newest-first)
+- `date >= TIME_CUTOFF_MS` → collect
+- `has_replies: true` → queue for `clickup_get_chat_message_replies` (batched in 4B)
 
-Build `ALL_MESSAGES[]` — every message + reply in the time window, with:
-- `message_id`, `channel_id`, `channel_name`, `user_id`, `content`, `date`, `thread_parent_id` (if reply)
+### 4B — Chat replies (batched)
 
-Print: `✓ [channel-name] — [N] in window` for each channel.
+For all messages queued in 4A, fire `clickup_get_chat_message_replies` in batches of 6. Don't serially await each — batch the full set.
+
+### 4C — Task comments (main + threaded)
+
+For each `task_id` in `ACTIVE_TASKS[]`, call `clickup_get_task_comments`:
+- `taskId`: `task_id`
+- `start`: `TIME_CUTOFF_MS`
+- `limit`: 50
+
+For each comment with `reply_count > 0`, call `clickup_get_threaded_comments` (batched in parallel 6).
+
+**If `ACTIVE_TASKS[]` has > 50 tasks**, process them in waves: 6 tasks' comments in parallel, finish wave, start next. Do not fire 500 concurrent API calls.
+
+### 4D — Task description @mentions (lightweight)
+
+For each `task_id` in `ACTIVE_TASKS[]`, scan the already-fetched `description` field (no extra API call) for `@[MY_NAME]` / `@[MY_USER_ID]`. If found AND `date_created >= TIME_CUTOFF_MS` (i.e. task is new in window OR description was recently edited) → add synthetic entry to `ALL_MESSAGES[]` with `source_type: task_description`.
+
+### 4E — Incoming reminders
+
+Each reminder from `INCOMING_REMINDERS[]` → synthesise a message entry (`source_type: reminder`) with `content = reminder.text`, `user_id = reminder.created_by`.
+
+### 4F — Docs (best-effort)
+
+If `ACTIVE_DOCS[]` populated, fetch page content for each via `clickup_get_document_pages` and scan for my @mention. Batch in parallel 6. Add matches as `source_type: doc_mention`.
+
+On connector errors → skip that source, add name to `ERRORS[]`, continue. Never fail the whole run because one source errored.
+
+Build unified `ALL_MESSAGES[]` with:
+- `source_type`: `channel` | `dm` | `group_dm` | `task_comment` | `task_comment_reply` | `task_description` | `reminder` | `doc_mention`
+- `message_id` (chat) OR `comment_id` (task comment) OR synthetic id for `task_description`/`reminder`/`doc_mention`
+- `parent_id` — channel_id OR task_id OR doc_id
+- `parent_name` — channel name OR task name OR doc name
+- `parent_url` — direct URL to the source
+- `user_id`, `content`, `date`, `thread_parent_id` (if reply)
+
+Print per source type:
+```
+✓ #channel-name         — [N] in window
+✓ DM: Jordan            — [N] in window
+✓ Task: "Plugin zip"    — [N] comments in window
+✓ Task description @me  — [N] tasks
+✓ Reminders from others — [N]
+✓ Docs with @me         — [N]
+```
+
+Print rate-limit summary:
+```
+⚡ API calls: [N] ClickUp requests · [N] retries · [N] sources skipped
+```
 
 ---
 
@@ -142,12 +222,13 @@ For every message in `ALL_MESSAGES[]`, apply this filter:
 
 ### ✅ INCLUDE if ANY of these are true:
 
-1. **@mention of me** — content contains reference to `MY_USER_ID`, `MY_NAME`, or `@mention` tag pointing at current user
-2. **Question directed at me** — message ends with `?` AND is addressed to me (DM, thread where I last spoke, or after an @mention)
+1. **@mention of me** — content contains reference to `MY_USER_ID`, `MY_NAME`, or `@mention` tag pointing at current user (applies to chat messages AND task comments)
+2. **Question directed at me** — message ends with `?` AND is addressed to me (DM, thread where I last spoke, task comment replying to mine, or after an @mention)
 3. **Someone is blocked waiting on me** — contains phrases like "waiting for you", "need your input", "need your approval", "can you decide", "what do you think", "your call"
-4. **My unresolved commitment** — I previously said "I will…", "I'll do…", "Let me…", "I'll check…" in a thread AND no closure exists from me afterward
-5. **I'm the assigned dev/owner** — a task referenced in the message has MY_USER_ID as assignee AND the message flags urgency or a blocker
-6. **Partnership / deal needs my response** — message is in a partnership/deal context and directly asks for my reply or approval
+4. **My unresolved commitment** — I previously said "I will…", "I'll do…", "Let me…", "I'll check…" in a thread or task comment AND no closure exists from me afterward
+5. **I'm the assigned dev/owner** — source is a task comment on a task where `MY_USER_ID` is assignee AND the comment flags urgency or a blocker
+6. **Task assignment change** — a task comment / system event indicates I was just made assignee or watcher
+7. **Partnership / deal needs my response** — message is in a partnership/deal context and directly asks for my reply or approval
 
 ### ❌ SKIP unconditionally:
 
@@ -352,8 +433,10 @@ assignees: [MY_USER_ID]
 tags:      ["pickle", "pickle-clickup"]
 description:
   📍 SOURCE
-  From: [sender] | In: [channel]
-  Link: https://app.clickup.com/[WORKSPACE_ID]/chat/r/[channel_id]/t/[message_id]
+  From: [sender] | In: [channel name OR task name]
+  Type: [chat channel / DM / group DM / task comment / task comment reply]
+  Link: [if chat]    https://app.clickup.com/[WORKSPACE_ID]/chat/r/[channel_id]/t/[message_id]
+        [if comment] https://app.clickup.com/t/[task_id]?comment=[comment_id]
   Date: [human-readable date]
 
   💬 WHAT THEY SAID
@@ -449,8 +532,8 @@ description:
 📊 STATS
   Inbox tasks created  : [N]
   Follow-up tasks      : [N]
-  Channels scanned     : [N] channels · [N] DMs · [N] group DMs
-  Messages in window   : [N]
+  Sources scanned      : [N] channels · [N] DMs · [N] group DMs · [N] active tasks
+  Messages in window   : [N] chat messages · [N] task comments
   Already actioned (memory skipped) : [N]
   Skipped (errors)     : [channel names or "none"]
 
