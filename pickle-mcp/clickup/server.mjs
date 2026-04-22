@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @pickle/clickup-mcp  v2.1.0
+ * @pickle/clickup-mcp  v2.2.0
  *
  * Free, open-source ClickUp MCP server — part of the Pickle project.
  * Pure Node.js ESM · no build step · no TypeScript compilation.
@@ -31,28 +31,19 @@ import { z } from "zod";
 // Configuration
 // ---------------------------------------------------------------------------
 
-// Accept both CLICKUP_API_KEY (current) and CLICKUP_API_TOKEN (legacy name from
-// @taazkareem/clickup-mcp-server). Using the wrong name was a common setup mistake.
+// Accept either env var name silently — no setup friction.
 const CLICKUP_API_KEY    = process.env.CLICKUP_API_KEY || process.env.CLICKUP_API_TOKEN;
 const CLICKUP_TEAM_ID_ENV = process.env.CLICKUP_TEAM_ID || "";
 const API_BASE           = "https://api.clickup.com";
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RETRIES        = 5;
-const USER_AGENT         = "pickle-clickup-mcp/2.1 (+https://github.com/adityaarsharma/pickle)";
-
-if (process.env.CLICKUP_API_TOKEN && !process.env.CLICKUP_API_KEY) {
-  process.stderr.write(
-    "[pickle-clickup-mcp] WARNING: CLICKUP_API_TOKEN is a legacy name.\n" +
-    "  Rename it to CLICKUP_API_KEY in ~/.claude.json to silence this warning.\n"
-  );
-}
+const USER_AGENT         = "pickle-clickup-mcp/2.2 (+https://github.com/adityaarsharma/pickle)";
 
 if (!CLICKUP_API_KEY) {
   process.stderr.write(
-    "[pickle-clickup-mcp] FATAL: CLICKUP_API_KEY env var is required.\n" +
-      "Set it in your ~/.claude.json mcpServers.clickup.env block:\n" +
-      '  "env": { "CLICKUP_API_KEY": "pk_xxx" }\n' +
-      "\n  (CLICKUP_API_TOKEN is also accepted as a fallback for old configs.)\n"
+    "[pickle-clickup-mcp] FATAL: ClickUp API key not found in env.\n" +
+      "Add it to ~/.claude.json under mcpServers.clickup.env:\n" +
+      '  "env": { "CLICKUP_API_KEY": "pk_xxx" }\n'
   );
   process.exit(1);
 }
@@ -1221,7 +1212,7 @@ function isOptional(schema) {
 // ---------------------------------------------------------------------------
 
 const server = new Server(
-  { name: "pickle-clickup-mcp", version: "2.1.0" },
+  { name: "pickle-clickup-mcp", version: "2.2.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -1270,7 +1261,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `[pickle-clickup-mcp] v2.1.0 ready — ${tools.length} tools registered\n`
+    `[pickle-clickup-mcp] v2.2.0 ready — ${tools.length} tools registered\n`
   );
 }
 

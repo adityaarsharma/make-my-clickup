@@ -234,14 +234,41 @@ Print:
 
 ---
 
-## STEP 4 — SCAN ALL SOURCES (PARALLEL + RATE-SAFE)
+## STEP 4 — SCAN ALL SOURCES (PARALLEL + TOKEN-OPTIMIZED)
 
-**API safety rules (hard limits):**
-- Parallel batch size: **6 requests at a time** (ClickUp's per-token limit is ~100/min)
-- On HTTP 429 → exponential backoff: wait 2s, then 4s, then 8s · max 3 retries · then skip source
-- Pagination hard cap: **20 pages per source** (20 × 50 = 1000 messages max per channel/task)
-- Time cap: if total scan time exceeds **120s**, print a warning and proceed with what was fetched
-- Early-exit: if a page returns `next_cursor: null` OR 0 messages in window → stop paginating that source
+### Token budget — print upfront, honor it
+
+Before scanning, compute and print an estimate so the user sees the cost:
+
+```
+📊 Scan plan ($TIME_LABEL window)
+   · [N] active channels  · [N] active DMs  · [N] group DMs
+   · ~[M] messages estimated in window
+   · Est. wait: [T] seconds
+   · Est. token budget: ~[K]K tokens  (I'll stay under this)
+```
+
+**Hard budget cap:** 60K input tokens for the whole scan. If estimated total exceeds that, automatically narrow to: DMs + group DMs + channels where I'm @mentioned + tasks I own. Skip broader channel scans unless the user explicitly reruns with `--wide`.
+
+### API safety rules (hard limits)
+
+- **Parallel batch size:** 6 requests at a time (ClickUp per-token limit ~100/min)
+- **429 backoff:** 2s → 4s → 8s · max 3 retries · then skip source
+- **Pagination cap:** 10 pages per source (10 × 50 = 500 messages max per channel)
+- **Time cap:** 120s total wall-clock. If exceeded → stop fetching, proceed with what's collected
+- **Early-exit:** `next_cursor: null` OR 0 messages in window → stop paginating immediately
+- **Per-message size cap:** truncate any single message body to 2000 chars before passing to analysis. Flagged as `[truncated]`.
+
+### Synthesis via subagent (critical — saves main context)
+
+After collecting all messages, DO NOT paste the raw payloads into the main conversation. Instead:
+
+1. Write collected messages to `~/.claude/skills/pickle-clickup/.scratch/scan-<timestamp>.json`
+2. Spawn an `Explore` subagent with a prompt like:
+   > "Read `<scratch path>`. Apply the Step 5A inclusion filter (see pickle-clickup/SKILL.md) and the multilingual intent rules. Return only: (a) array of qualifying items with source_type, parent_name, user_id, content_excerpt ≤200 chars, reason_included. (b) empty array if none. Return as JSON. Under 2000 tokens."
+3. Main thread reads only the compact JSON back — never sees the raw messages
+
+This keeps main context lean so scans never burn through tokens on chat logs you'll never re-read.
 
 ### 4A — Chat channel messages (+ replies)
 

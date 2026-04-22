@@ -2,62 +2,53 @@
 
 > **In a pickle? Pickle sorts it.**
 >
-> A Claude Code skill that scans ClickUp + Slack, extracts what actually needs your attention, and creates prioritised tasks in your personal board — in any language, from any corner.
+> Every morning, 200+ messages across ClickUp and Slack. Half are noise. A few are decisions waiting on you. Pickle reads everything, keeps the few that matter, and drops them in your personal task board — ranked by what YOU actually do.
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. 100% free, forever.
+Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever.
 
 ---
+
+## The problem
+
+You wake up. Open ClickUp. Open Slack. 47 unread threads. You scan, skim, miss the one DM where a teammate's been waiting 2 days for your approval. By 11am, someone pings: *"any update on the thing I sent Monday?"*
+
+The problem isn't you. Your attention is spread across channels, DMs, task comments, and threaded replies — and no single view tells you *"here's what needs you right now."*
 
 ## What Pickle does
 
-Every morning (or whenever you run it), Pickle scans **every corner** of your work chat and hands you a prioritised inbox of what actually needs you:
-
-### Mode A — Inbox 📥
-What needs YOUR action right now:
-- DMs and group DMs you're in (questions, decisions, approvals)
+**Mode A — Inbox** 📥 — Every message that needs your action:
+- DMs and group DMs you're in (questions, approvals, decisions)
 - Channel messages where you're @mentioned
 - Task comments on tasks you own or watch
-- Docs where you're mentioned
+- Docs where someone tagged you
 - Reminders others set for you
 
-### Mode B — Follow-up Tracker 🔁
-What OTHERS owe YOU:
-- You asked → they acknowledged but never delivered
-- You asked → no reply at all
-- You asked → they said "will do" 3 days ago
+**Mode B — Follow-up Tracker** 🔁 — Every thread where someone owes YOU something:
+- You asked → they said "will do" → 3 days of silence
+- You asked for a file → they replied "sure" but never sent it
+- You set a recurring ask → updates stopped after Tuesday
 
-Optional: `/pickle-clickup 24h followup` — Pickle drafts reminder messages and asks before sending.
+Pickle creates prioritised tasks in your personal board, ranked by urgency and by what your role actually cares about. You go from 47 threads to 7 tasks.
 
----
+## What makes Pickle different
 
-## Why Pickle is different
+### 🎯 Scored by YOUR role, not a generic rule
+During setup, Pickle asks your role (CEO, Developer, Marketer, Designer, PM, Sales, etc.) and one line about what you do day-to-day. It uses that as a lens — a CEO sees partnership and approval asks ranked higher; a developer sees PR reviews and production blockers; a marketer sees copy approvals and launch decisions. Nothing gets hidden — role only reorders, never filters out.
 
-### 🌐 Multilingual intent detection
-Hindi, Gujarati, English — or any mix in one sentence. Pickle understands the **meaning**, not just keywords.
+### 📬 Catches DMs that others miss
+In a private DM or group DM that includes you, every unanswered question is yours — even if it's technically addressed to someone else in the thread. That's how work actually flows. Pickle knows this.
 
-| Meaning | English | Hindi/Hinglish | Gujarati |
-|---------|---------|----------------|----------|
-| Waiting for approval | "once you confirm" | "aap bolo toh karunga" | "tame confirm karo" |
-| Asking for opinion | "what do you think" | "kya lagta hai" | "tame shu vicharcho" |
-| Task request | "please do this" | "yeh karo", "ho jayega?" | "aa karo", "thase?" |
+### 🌐 Reads intent, not just keywords
+Teams write in whatever language is natural — and Pickle reads the *meaning*, not the exact phrase. "Can you confirm?", "please approve", and any local-language equivalent all register the same way.
 
-### 📬 DM-aware
-In a DM or group DM that includes you, **every question or pending decision is yours to see — @mention NOT required.** Because in a private conversation, you're implicitly the audience. That's how you stop missing things.
+### 🚫 Never auto-sends
+Every follow-up message is drafted, shown to you, and only sent after you say so. If you've already nudged someone twice, Pickle refuses to send a third — it suggests you talk to them directly. No awkward spam-your-teammate moments.
 
-### 🎯 Personalised scoring
-During `/pickle-setup`, you tell Pickle your **role** (Founder, Dev, Marketer, etc.) and a one-line "what I do day-to-day". Pickle uses that as a PERSPECTIVE — a CEO gets approvals/deals boosted, a dev gets PR reviews/incidents boosted, a marketer gets copy approvals/launches boosted.
+### 🔒 Runs on your machine
+No Pickle server exists. Your chat data never leaves your laptop. The only network calls are directly from your machine to the official ClickUp / Slack APIs, using your own session.
 
-**Nothing is hidden by role.** Role only reorders priority — the inbox still catches everything.
-
-### 🔒 Your data stays on your machine
-Pickle has no server. No phone-home. No telemetry. The only network calls are directly to ClickUp's / Slack's official APIs — from YOUR machine, using YOUR token.
-
-### 💰 Actually free forever
-Both supported paths are 100% free:
-1. **Pickle's own MCP** (recommended) — bundled Node.js server, MIT licensed, no license key, no rate limits
-2. **Official Claude Connector** (OAuth) — 2-click setup, rate-limited to 50-300 calls/day
-
-Pickle does **NOT** depend on `@taazkareem/clickup-mcp-server` — that package moved to a paid model. Pickle's own MCP is a free drop-in replacement.
+### 💰 Free forever
+Both supported paths are 100% free. No trial, no paid tier, no credit card.
 
 ---
 
@@ -67,105 +58,76 @@ Pickle does **NOT** depend on `@taazkareem/clickup-mcp-server` — that package 
 /pickle-setup
 ```
 
-That's it. The setup skill walks you through:
-1. Your name + role (2 questions, used for personalisation)
-2. ClickUp, Slack, or both?
-3. Auth path (OAuth connector or personal token)
-4. One-time restart
-5. A test scan
-
-Takes ~3 minutes.
-
----
+Takes about 3 minutes. Pickle asks your name + role, which ecosystem (ClickUp / Slack / both), handles the auth. One restart. You're live.
 
 ## Daily usage
 
 ```
 /pickle-clickup            # scan last 24 hours
-/pickle-clickup 7d         # scan last week
+/pickle-clickup 7d         # last week
 /pickle-clickup 24h followup   # scan + draft follow-up reminders
 
 /pickle-slack              # same for Slack
 /pickle-slack 7d
 ```
 
-Or run both at once — ClickUp data and Slack data stay completely separate.
+ClickUp data and Slack data stay completely separate — never mixed.
 
----
+## Update
 
-## Update command (never reinstall)
+When a new version drops, run:
 
-When a new version drops, just run:
-
-### Form A — If you installed via personal token (pickle-mcp path)
 ```bash
 bash ~/.claude/pickle-mcp/update.sh
 ```
 
-### Form B — Universal one-liner (works for everyone)
+Or the universal one-liner (works for any install):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/update.sh | bash
 ```
 
-Both:
-- ✅ Auto-detect what you have (ClickUp, Slack, or both)
-- ✅ Only update those — never install anything you didn't pick
-- ✅ Refresh npm deps if package.json changed
-- ✅ Keep your prefs.json and state.json untouched
-- ✅ Show long-form ETA with fun facts so you're never staring at a blank terminal
-
-After the update finishes: **fully quit Claude Code (Cmd+Q on Mac) and reopen** so the MCP tools re-register.
+Auto-detects what you have, only updates those pieces, keeps your preferences untouched.
 
 ---
 
-## What's covered (every corner, no task missed)
+## Every surface covered
 
-| Source | Supported? |
-|--------|-----------|
-| ClickUp channels | ✅ |
-| ClickUp DMs (1:1) | ✅ |
-| ClickUp group DMs | ✅ |
-| ClickUp task comments | ✅ |
-| ClickUp threaded replies | ✅ |
-| ClickUp task descriptions (@me) | ✅ |
-| ClickUp Docs (@me) | ✅ |
-| ClickUp reminders | ✅ |
-| Slack channels | ✅ |
-| Slack DMs | ✅ |
-| Slack group DMs (mpim) | ✅ |
-| Slack threads | ✅ |
-| Slack mentions | ✅ |
-| Slack reminders | ✅ |
+| Source | ClickUp | Slack |
+|--------|---------|-------|
+| Channels | ✅ | ✅ |
+| Direct messages | ✅ | ✅ |
+| Group DMs | ✅ | ✅ (mpim) |
+| Task comments | ✅ | — |
+| Threaded replies | ✅ | ✅ |
+| Task descriptions / mentions | ✅ | — |
+| Docs / canvas mentions | ✅ | — |
+| Reminders | ✅ | ✅ |
+
+No corner left unscanned.
 
 ---
 
-## What Pickle NEVER does
+## What Pickle will never do
 
-- ❌ Never auto-sends a follow-up. Every reminder message asks you first.
-- ❌ Never posts in public channels for you.
-- ❌ Never hides a message because of role. Role only boosts priority.
-- ❌ Never calls a second follow-up if one was already sent (escalation guard).
-- ❌ Never uploads your data anywhere.
+- ❌ Auto-send any message without your confirmation
+- ❌ Post in public channels on your behalf
+- ❌ Hide a message because your role "doesn't care" about it
+- ❌ Send a third follow-up to someone you've already nudged twice
+- ❌ Upload your chat data anywhere — it all stays on your machine
 
 ---
 
 ## Uninstall
 
 ```bash
-rm -rf ~/.claude/skills/pickle-clickup
-rm -rf ~/.claude/skills/pickle-slack
-rm -rf ~/.claude/skills/pickle-setup
-rm -rf ~/.claude/pickle-mcp
+rm -rf ~/.claude/skills/pickle-clickup ~/.claude/skills/pickle-slack ~/.claude/skills/pickle-setup ~/.claude/pickle-mcp
 ```
 
-Then remove the `mcpServers.clickup` block from `~/.claude.json`.
-
-That's the entire uninstall. No system files, no services, nothing else to clean up.
+Then remove the `mcpServers.clickup` block from `~/.claude.json` if you added one. That's the entire uninstall — no services, no system files.
 
 ---
 
 ## Credits
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma) because inbox-chaos across ClickUp + Slack was eating hours every morning.
-
-MIT licensed. Feel free to fork, PR, or extend.
+Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Contributions welcome.
