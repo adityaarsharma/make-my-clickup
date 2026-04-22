@@ -215,13 +215,16 @@ async function handleTool(name, args) {
         schema: [
           { key: COL.title,       name: "Title",       type: "text",   is_primary_column: true },
           { key: COL.item_type,   name: "Type",        type: "select",
-            options: { choices: [{ value: "Inbox", label: "Inbox" }, { value: "Follow-up", label: "Follow-up" }] } },
+            options: { choices: [
+              { value: "Inbox",     label: "Inbox",     color: "blue"   },
+              { value: "Follow-up", label: "Follow-up", color: "purple" },
+            ]} },
           { key: COL.priority,    name: "Priority",    type: "select",
             options: { choices: [
               { value: "🔴 Urgent", label: "🔴 Urgent", color: "red"    },
               { value: "🟠 High",   label: "🟠 High",   color: "orange" },
               { value: "🟡 Normal", label: "🟡 Normal", color: "yellow" },
-              { value: "⚪ Low",    label: "⚪ Low",    color: "grey"   },
+              { value: "⚪ Low",    label: "⚪ Low",    color: "blue"   },
             ]} },
           { key: COL.from_to,     name: "From/To",     type: "text" },
           { key: COL.channel,     name: "Channel",     type: "text" },
