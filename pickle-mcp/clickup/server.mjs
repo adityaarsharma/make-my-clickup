@@ -37,7 +37,7 @@ const CLICKUP_TEAM_ID_ENV = process.env.CLICKUP_TEAM_ID || "";
 const API_BASE           = "https://api.clickup.com";
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RETRIES        = 5;
-const USER_AGENT         = "pickle-clickup-mcp/2.2 (+https://github.com/adityaarsharma/pickle)";
+const USER_AGENT         = "pickle-clickup-mcp/2.3 (+https://github.com/adityaarsharma/pickle)";
 
 if (!CLICKUP_API_KEY) {
   process.stderr.write(

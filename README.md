@@ -79,7 +79,9 @@ ClickUp data and Slack data stay completely separate — never mixed.
 /pickle-update
 ```
 
-That's it. No terminal, no copy-paste. Auto-detects what you have, pulls the latest, tells you to quit + reopen Claude Code. Your tokens, role, and task history stay untouched.
+That's it. No terminal, no copy-paste. Auto-detects what you have, pulls the latest, tells you to Cmd+Q and reopen Claude Code. Your tokens, role, and task history stay untouched.
+
+> **Note:** `/pickle-update` overwrites `SKILL.md` files with the latest repo versions. If you've hand-edited any Pickle skill locally (e.g. added custom noise-channel patterns), copy your edits somewhere safe before updating — they'll be replaced.
 
 ---
 

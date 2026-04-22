@@ -193,10 +193,12 @@ if slack needed   → cp -R "$TMPDIR/pickle-slack"   ~/.claude/skills/
 # Always ship the updater skill so the user can run /pickle-update later
 cp -R "$TMPDIR/pickle-update" ~/.claude/skills/
 
+# Migration FIRST (before fresh cp) — if a stale copy sits under skills/
+# from an older Pickle install, delete it so the new cp lands cleanly.
+rm -rf ~/.claude/skills/pickle-mcp 2>/dev/null
+
 # MCP server lives OUTSIDE skills/ (not a skill, just Node code)
 if clickup needed (token path) → cp -R "$TMPDIR/pickle-mcp" ~/.claude/pickle-mcp
-# Migration: if a stale copy sits under skills/, move it out silently
-[ -d ~/.claude/skills/pickle-mcp ] && mv ~/.claude/skills/pickle-mcp ~/.claude/pickle-mcp
 
 rm -rf "$TMPDIR"
 ```

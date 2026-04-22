@@ -218,7 +218,7 @@ Call `clickup_search_reminders` with `assignee_id: MY_USER_ID` (or equivalent). 
 
 ### 3D — Docs I own or was mentioned in (best-effort)
 
-If the MCP exposes `clickup_list_document_pages` or `clickup_search` with a document scope, search for documents updated within window where `MY_USER_ID` is an author or mentioned. This is best-effort — skip silently if tools unavailable. Store as `ACTIVE_DOCS[]`.
+If `clickup_search_docs` is available, list Docs updated within window (filter by `date_updated_gt >= TIME_CUTOFF_MS` when the API supports it). Store as `ACTIVE_DOCS[]`. Skip silently if the tool isn't available (connector-path users may not have Docs v3 exposed).
 
 Print:
 ```
@@ -260,7 +260,8 @@ Before scanning, compute and print an estimate so the user sees the cost:
 
 After collecting all messages, DO NOT paste the raw payloads into the main conversation. Instead:
 
-1. Write collected messages to `~/.claude/skills/pickle-clickup/.scratch/scan-<timestamp>.json`
+1. Before writing the new file, clean up old scratch: `find ~/.claude/skills/pickle-clickup/.scratch -name 'scan-*.json' -mtime +7 -delete 2>/dev/null` — removes scratch files older than 7 days so daily runs don't accumulate into a GB of old chat payloads over a year.
+2. Write collected messages to `~/.claude/skills/pickle-clickup/.scratch/scan-<timestamp>.json`
 2. Launch a general-purpose subagent via the `Task` tool with a prompt like:
    > "Read `<scratch path>`. Apply the Step 5A inclusion filter (see pickle-clickup/SKILL.md) and the multilingual intent rules. Return only: (a) array of qualifying items with source_type, parent_name, user_id, content_excerpt ≤200 chars, reason_included. (b) empty array if none. Return as JSON. Under 2000 tokens."
 3. Main thread reads only the compact JSON back — never sees the raw messages
@@ -301,7 +302,7 @@ Each reminder from `INCOMING_REMINDERS[]` → synthesise a message entry (`sourc
 
 ### 4F — Docs (best-effort)
 
-If `ACTIVE_DOCS[]` populated, fetch page content for each via `clickup_get_document_pages` and scan for my @mention. Batch in parallel 6. Add matches as `source_type: doc_mention`.
+If `ACTIVE_DOCS[]` populated, fetch page content for each via `clickup_get_doc_pages` and scan for my @mention in each page. Batch in parallel 6. Add matches as `source_type: doc_mention`.
 
 On connector errors → skip that source, add name to `ERRORS[]`, continue. Never fail the whole run because one source errored.
 

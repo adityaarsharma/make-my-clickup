@@ -441,11 +441,40 @@ If `FOLLOWUP_MODE = false` → show the list in the final report only. Do not as
 - **NORMAL 🟡**: peer request, this-week deadline
 - **LOW ⚪**: soft ask, no deadline
 
-### Importance:
+### Importance (generic):
 - +2: sender is CEO / founder / direct manager (use Slack profile titles)
 - +1: sender is team lead
 - +1: thread has 3+ people waiting
 - −1: I'm in group DM but not primary target
+
+### 🎯 Role-based boost (personalisation from prefs.json, loaded in Step 0.5)
+
+On top of the generic score, apply a **+1 boost** when the message aligns with `USER_ROLE`:
+
+| USER_ROLE | What gets boosted (+1) |
+|-----------|------------------------|
+| Founder / CEO | Deals, partnerships, pricing decisions, approvals, investor/board items, external-facing asks |
+| Manager / Team Lead | Team blockers, hiring/performance asks, cross-team coordination, escalations from reports |
+| Developer / Engineer | PR reviews, production incidents, bug escalations, deploy blockers, spec clarifications |
+| Designer / UX | Design reviews, Figma feedback, component decisions, brand approvals |
+| Marketing / Content | Copy approvals, launch timing, title/headline changes, campaign decisions, content reviews |
+| Sales / BD | Deal updates, partner requests, contract asks, quote approvals, intro requests |
+| Customer Success | Escalations, refund asks, churn risks, complaint threads, renewals |
+| QA / Testing | Release blockers, bug verifications, test plan approvals |
+| Product Manager | Spec questions, prioritisation calls, roadmap decisions, scope changes |
+| Operations / Finance / HR | Policy questions, approvals, compliance items, hiring/payroll |
+
+### 🎯 Role-context match (+1 extra)
+
+If the message text contains ANY word from `ROLE_KEYWORDS[]` (extracted in Step 0.5 from your day-to-day description) → **+1 more**.
+
+Example: If ROLE_CONTEXT = "I approve YouTube titles", and a Slack DM says "sir yeh title confirm karo" — keyword "title" matches → +1 extra.
+
+### Final score
+
+Final priority tier = base urgency tier → bumped one level UP if (importance_score + role_boosts) ≥ 2.
+
+**Floor rule:** Role can only BOOST priority, never lower it below its base tier. Role is a lens, not a veto. Nothing gets hidden.
 
 ---
 
