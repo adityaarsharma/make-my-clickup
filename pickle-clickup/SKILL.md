@@ -123,17 +123,34 @@ If no prefs file → print `🎯 Generic scoring (no role profile — run /pickl
 
 ---
 
-## STEP 1 — IDENTIFY USER & WORKSPACE
+## STEP 1 — IDENTIFY USER & WORKSPACE (cache-first)
 
-1. Call `clickup_get_workspace_members` to get all workspace members.
-2. Identify the **authenticated user** — the ClickUp user whose account/token is linked to the MCP.
-3. Store:
-   - `MY_USER_ID` — authenticated user's numeric ClickUp ID
-   - `MY_NAME` — display name
-   - `WORKSPACE_ID` — workspace numeric ID
-   - `MEMBER_MAP` — a lookup table of `user_id → display_name` for all team members
+**Check shared cache before API calls:**
 
-Print: `👤 Running as: $MY_NAME (ID: $MY_USER_ID) in workspace $WORKSPACE_ID`
+```
+Read ~/.claude/pickle/cache/workspace.json
+
+If workspace.json exists AND members_cached_at + 24h > now:
+  WORKSPACE_ID = cache.workspace_id
+  MEMBER_MAP = cache.members  ← skip clickup_get_workspace_members
+  Print: "👤 Members from cache ([N], [X]h ago)"
+Else:
+  Call clickup_get_workspace_members → ALL_MEMBERS[]
+  Call clickup_get_workspace_hierarchy → WORKSPACE_ID
+  Build MEMBER_MAP = { user_id: { name, username, email } }
+  mkdir -p ~/.claude/pickle/cache/
+  Write to workspace.json: { workspace_id, workspace_name, members_cached_at: now, members: MEMBER_MAP }
+  Print: "👤 Members fetched fresh ([N] members)"
+```
+
+Always identify `MY_USER_ID` from the authenticated session — don't rely on cache for this.
+
+**After the run, always update task cache:**
+Any tasks fetched during channel scanning → write to `~/.claude/pickle/cache/tasks.json` (keyed by task ID, with cached_at timestamp). This pre-warms the cache for `pickle-report` runs later.
+
+Store: `MY_USER_ID`, `MY_NAME`, `WORKSPACE_ID`, `MEMBER_MAP`
+
+Print: `👤 Running as: $MY_NAME in workspace $WORKSPACE_ID`
 
 ---
 

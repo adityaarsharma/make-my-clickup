@@ -52,19 +52,62 @@ Both supported paths are 100% free. No trial, no paid tier, no credit card.
 
 ---
 
+## Two versions of Pickle
+
+Pickle ships as two separate installs targeting different people on a team.
+
+### 🧑‍💼 Pickle Manager
+For team leads and managers. Scans the whole team.
+
+| Command | What it does |
+|---------|-------------|
+| `/pickle-report [channel] [window]` | Team performance pulse — commitment vs execution vs time tracking |
+| `/pickle-clickup [window]` | Personal ClickUp inbox — what needs your action |
+| `/pickle-slack [window]` | Personal Slack inbox — same, from Slack |
+
+### 👤 Pickle Team Member
+For individual contributors. Shows you your own board.
+
+| Command | What it does |
+|---------|-------------|
+| `/pickle-me` | Daily briefing — your tasks, overdue, zombies, standup gaps, blockers |
+| `/pickle-me 7d` | Same, but with 7-day context window |
+
+Both versions are completely isolated. Team members never see manager commands. Managers never clutter team members with report tools. Each version installs only what it needs.
+
+---
+
 ## Install
+
+Two separate install links — share the right one with each person.
+
+### 🧑‍💼 For managers and team leads
 
 Paste into Claude Code:
 
 ```
-Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup
+Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup manager
 ```
+
+Installs: `/pickle-report` · `/pickle-clickup` · `/pickle-slack` · `/pickle-update`
+
+Takes about 3 minutes. Walks through name, role, ClickUp/Slack auth. One restart. You're live.
+
+### 👤 For team members
+
+Paste into Claude Code:
+
+```
+Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup team
+```
+
+Installs: `/pickle-me` · `/pickle-update`
+
+Takes about 2 minutes. Connects ClickUp only. No manager commands, no report tools.
 
 > **Repo:** [github.com/adityaarsharma/pickle](https://github.com/adityaarsharma/pickle)
 
-Takes about 3 minutes. Pickle asks your name + role, which ecosystem (ClickUp / Slack / both), handles the auth. One restart. You're live.
-
-**Setup is one-time only** — `/pickle-setup` self-removes after it completes. You never run it again. Just use `/pickle-clickup` or `/pickle-slack` going forward.
+**Setup is one-time only** — `/pickle-setup` self-removes after it completes. You never run it again.
 
 Pickle ships its own free open-source MCPs — no paid dependencies:
 - `pickle-mcp/clickup/` — ClickUp tasks, comments, docs, reminders
@@ -72,6 +115,7 @@ Pickle ships its own free open-source MCPs — no paid dependencies:
 
 ## Daily usage
 
+**For managers:**
 ```
 /pickle-clickup            # scan last 24 hours
 /pickle-clickup 7d         # last week
@@ -79,6 +123,15 @@ Pickle ships its own free open-source MCPs — no paid dependencies:
 
 /pickle-slack              # same for Slack
 /pickle-slack 7d
+
+/pickle-report marketing-hq        # team pulse
+/pickle-report engineering-hq 14d  # two-week view
+```
+
+**For team members:**
+```
+/pickle-me        # daily briefing — your board, overdue, gaps
+/pickle-me 7d     # same with 7-day standup context
 ```
 
 ClickUp data and Slack data stay completely separate — never mixed.
@@ -103,12 +156,32 @@ Pickle Manager scans what your team said they'd do (ClickUp chat) vs what they a
 - 👻 Ghost mode — team members silent for 40%+ of the window
 - 📉 Trends over time — is someone consistently slipping, or improving?
 
+**Truly Done standard:** A task only counts as complete when ALL THREE are true — status closed + description filled + time tracked. Ghost closures (closed with no description) and untracked completions are both flagged.
+
 **What it posts:**
 A structured report in the department's ClickUp channel (from your account), tagging each team member with their individual summary. Flags section for your eyes — anything that needs a direct conversation.
 
-**Local memory:** Stores efficiency trends per person. After 3+ runs, detects recurring patterns and escalates with appropriate weight.
+**Local memory:** Stores efficiency trends per person in `~/.claude/skills/pickle-report/state.json`. After 3+ runs, detects recurring patterns and escalates with appropriate weight. The state file stays local — never committed to GitHub.
 
-> **Scope:** POSIMYTH ClickUp only (for now). Requires ClickUp MCP connected.
+> **Scope:** ClickUp only for now. Slack report coming later. Requires ClickUp MCP connected.
+
+## Pickle Team Member — Personal Daily Briefing
+
+```
+/pickle-me          # your board right now — overdue, zombies, gaps
+/pickle-me 7d       # same with 7-day standup context
+```
+
+The personal version of Pickle. Run it at the start of your day. It shows you:
+- Every task assigned to you, ranked by urgency
+- What's overdue and by how many days
+- Zombie tasks you haven't touched in 5+ days
+- Gaps between what you said in standup vs what your cards actually show
+- Blockers you mentioned that are still unresolved
+
+After the briefing it can optionally draft your standup message for the day.
+
+**Local memory:** Tracks your run history in `~/.claude/skills/pickle-me/state.json`. Supports snoozing tasks you've already acknowledged.
 
 ## Update
 
@@ -206,6 +279,7 @@ rm -rf \
   ~/.claude/skills/pickle-clickup \
   ~/.claude/skills/pickle-slack \
   ~/.claude/skills/pickle-report \
+  ~/.claude/skills/pickle-me \
   ~/.claude/skills/pickle-setup \
   ~/.claude/skills/pickle-update \
   ~/.claude/pickle-mcp \

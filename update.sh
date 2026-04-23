@@ -18,11 +18,15 @@ HAS_SLACK_SKILL=0
 HAS_SETUP_SKILL=0
 HAS_UPDATE_SKILL=0
 HAS_CLICKUP_MCP=0
+HAS_REPORT_SKILL=0
+HAS_ME_SKILL=0
 
 [ -f "$SKILLS_DIR/pickle-clickup/SKILL.md" ] && HAS_CLICKUP_SKILL=1
 [ -f "$SKILLS_DIR/pickle-slack/SKILL.md" ]   && HAS_SLACK_SKILL=1
 [ -f "$SKILLS_DIR/pickle-setup/SKILL.md" ]   && HAS_SETUP_SKILL=1
 [ -f "$SKILLS_DIR/pickle-update/SKILL.md" ]  && HAS_UPDATE_SKILL=1
+[ -f "$SKILLS_DIR/pickle-report/SKILL.md" ]  && HAS_REPORT_SKILL=1
+[ -f "$SKILLS_DIR/pickle-me/SKILL.md" ]      && HAS_ME_SKILL=1
 [ -f "$PICKLE_MCP_DIR/clickup/server.mjs" ]  && HAS_CLICKUP_MCP=1
 
 if [ "$HAS_CLICKUP_SKILL" -eq 0 ] && [ "$HAS_SLACK_SKILL" -eq 0 ] && [ "$HAS_SETUP_SKILL" -eq 0 ] && [ "$HAS_UPDATE_SKILL" -eq 0 ]; then
@@ -42,6 +46,8 @@ echo ""
 echo "Detected on this machine:"
 [ "$HAS_CLICKUP_SKILL" -eq 1 ] && echo "   ✓ pickle-clickup (ClickUp inbox scanner)"
 [ "$HAS_SLACK_SKILL"   -eq 1 ] && echo "   ✓ pickle-slack (Slack inbox scanner)"
+[ "$HAS_REPORT_SKILL"  -eq 1 ] && echo "   ✓ pickle-report (team performance report)"
+[ "$HAS_ME_SKILL"      -eq 1 ] && echo "   ✓ pickle-me (personal daily briefing)"
 [ "$HAS_UPDATE_SKILL"  -eq 1 ] && echo "   ✓ pickle-update (one-command updater)"
 [ "$HAS_CLICKUP_MCP"   -eq 1 ] && echo "   ✓ pickle-mcp/clickup (free MCP server)"
 [ "$HAS_SETUP_SKILL"   -eq 1 ] && echo "   ✓ pickle-setup (onboarding wizard)"
@@ -114,7 +120,7 @@ fi
 # ── Update skills (only the ones user has) ──────────────────────
 echo ""
 echo "⏳ [3/4] Updating skill files ..."
-for skill in pickle-setup pickle-update pickle-clickup pickle-slack; do
+for skill in pickle-setup pickle-update pickle-clickup pickle-slack pickle-report pickle-me; do
   if [ -d "$SKILLS_DIR/$skill" ] && [ -d "$TMPDIR/$skill" ]; then
     cp -R "$TMPDIR/$skill/." "$SKILLS_DIR/$skill/"
     echo "   ✓ $skill"
@@ -134,6 +140,8 @@ echo ""
 echo "⏳ [4/4] Verifying install ..."
 [ "$HAS_CLICKUP_SKILL" -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-clickup/SKILL.md" ] && echo "   ✗ pickle-clickup SKILL.md missing — reinstall needed"
 [ "$HAS_SLACK_SKILL"   -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-slack/SKILL.md" ]   && echo "   ✗ pickle-slack SKILL.md missing — reinstall needed"
+[ "$HAS_REPORT_SKILL"  -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-report/SKILL.md" ]  && echo "   ✗ pickle-report SKILL.md missing — reinstall needed"
+[ "$HAS_ME_SKILL"      -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-me/SKILL.md" ]      && echo "   ✗ pickle-me SKILL.md missing — reinstall needed"
 [ "$HAS_CLICKUP_MCP"   -eq 1 ] && [ ! -f "$PICKLE_MCP_DIR/clickup/server.mjs" ]  && echo "   ✗ ClickUp MCP server.mjs missing — reinstall needed"
 echo "   ✓ All files in place."
 

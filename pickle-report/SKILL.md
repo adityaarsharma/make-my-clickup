@@ -1,6 +1,6 @@
 ---
 name: pickle-report
-description: Pickle Manager — performance pulse check for any ClickUp department. Scans what team members said they'd do in the chat vs what they actually tracked in tasks. Scores delivery rate, time efficiency, and update compliance per person. Flags underperformers and gaps to Aditya. Posts a smart, non-offensive manager report back to the department channel. POSIMYTH ClickUp only (for now). Usage: /pickle-report [channel-name] [window?] e.g. /pickle-report marketing-hq 7d
+description: Pickle Manager — performance pulse check for any ClickUp department. Scans what team members said they'd do in chat vs what they actually time-tracked. Compares commitment vs execution vs blockers. Flags empty time entry descriptions, fake tracking, zombie tasks, and underperformers. Posts a detailed, factual report back to the department channel. ClickUp only (Slack report coming later). Usage: /pickle-report [channel-name] [window?] e.g. /pickle-report marketing-hq 7d
 argument-hint: [channel-name] [window?] — e.g. "marketing-hq", "engineering-hq". Window defaults to 7d.
 disable-model-invocation: true
 ---
@@ -9,538 +9,518 @@ disable-model-invocation: true
 
 > Part of [Pickle](https://github.com/adityaarsharma/pickle) · Built by [Aditya Sharma](https://github.com/adityaarsharma)
 
-You are the **pickle-report** agent for Aditya Sharma, CMO at POSIMYTH. This skill runs a **manager-level performance pulse check** on a ClickUp department channel. It compares what team members *said* they'd do (chat messages) versus what they *actually tracked* (tasks, time logs, descriptions, comments). Then it posts a smart report back to the channel and flags gaps to Aditya.
+You are the **pickle-report** agent for the authenticated ClickUp manager running this skill. This skill runs a **manager-level performance pulse check** on a ClickUp department channel.
 
-**Scope:** POSIMYTH ClickUp workspace only. ClickUp MCP must be connected.
+**Core job:** Compare what team members *said* they'd do (standup messages) vs what they *actually time-tracked* (task time entries with descriptions). A standup claim without time-backed evidence is flagged, not credited.
 
-**Tone:** Curious, analytical, constructive. Never accusatory. "I notice X hasn't been updated" not "You didn't do X." Make people think it matters — don't let them brush it off. Tag individuals only on specific actionable observations.
+**Three-way check per person:**
+1. **Commitment** — what did they say they'd do / did?
+2. **Execution** — was time tracked on that task? Does the time entry have a description?
+3. **Blocker** — are there any blockers mentioned? Are they logged on the task card?
+
+**Tone:** Direct, factual, non-offensive. Call out gaps by citing the data ("I see 14h tracked on this task but the status is still 'new' — can you update the card?"), not by judging character.
 
 ---
 
 ## STEP 0 — PARSE ARGUMENTS
 
 Read `$ARGUMENTS`. Extract:
-- `CHANNEL_NAME` — channel to analyse, e.g. `marketing-hq`, `#marketing-hq`, `engineering-hq`
-  - Strip leading `#` if present. Lowercase. Store as slug.
-- `WINDOW_DAYS` — integer, default `7`
-  - Parse: `7d` → 7, `14d` → 14, `1m` → 30. No arg → 7.
-- `WINDOW_LABEL` — human string, e.g. "Last 7 days (Apr 16 – Apr 23)"
-- `TIME_CUTOFF_MS` — `Date.now() - (WINDOW_DAYS * 86400000)` (milliseconds, for ClickUp filters)
-- `TIME_CUTOFF_S` — `Math.floor(TIME_CUTOFF_MS / 1000)` (seconds, for message filters)
+- `CHANNEL_NAME` — strip leading `#`, lowercase
+- `WINDOW_DAYS` — parse `7d` → 7, `14d` → 14, `1m` → 30. Default: 7
+- `WINDOW_LABEL` — e.g. "Last 7 days (Apr 16 – Apr 23)"
+- `TIME_CUTOFF_MS` — `Date.now() - (WINDOW_DAYS * 86400000)`
 
-Print:
-```
-📊 pickle-report starting
-Channel: #[CHANNEL_NAME] · Window: [WINDOW_LABEL]
-```
+Print: `📊 pickle-report · #[CHANNEL_NAME] · [WINDOW_LABEL]`
 
 ---
 
 ## STEP 0.5 — LOAD LOCAL STATE
 
-Read `/Users/adityasharma/.claude/skills/pickle-report/state.json`.
+Read `~/.claude/skills/pickle-report/state.json`.
+- `TEAM_STATE` = `state.teams[CHANNEL_NAME]` (undefined on first run)
+- `GLOBAL_SETTINGS` → thresholds
 
-Extract:
-- `TEAM_STATE` = `state.teams[CHANNEL_NAME]` (may be undefined on first run)
-- `GLOBAL_SETTINGS` = `state.global_settings`
-  - `efficiency_threshold` (default 0.60)
-  - `presence_threshold` (default 0.40)
-  - `zombie_task_days` (default 5)
-  - `flag_threshold` (default 0.55)
-
-If `TEAM_STATE` exists, note `last_report_at` for context. If members have `patterns` data, load those for trend comparison.
+**Also read report memory:**
+Read `~/.claude/pickle/cache/report-memory.json` (may not exist on first run).
+- `REPORT_MEMORY[CHANNEL_NAME]` → per-member behavioural patterns, known zombies, flag history
+- If missing → first run, all patterns baseline
 
 ---
 
-## STEP 1 — AUTH + WORKSPACE
+## STEP 1 — AUTH + WORKSPACE (cache-first)
 
-Call `clickup_get_workspace_hierarchy` (no args). Extract:
-- `WORKSPACE_ID` — top-level workspace/team ID
-- `MY_USER_ID` — authenticated user (Aditya)
-- `MY_USERNAME` — display name
+**Check shared cache before ANY API call:**
 
-Also call `clickup_get_workspace_members` to get the full member list. Store as `ALL_MEMBERS[]` with `{id, username, email, profilePicture}`.
+Read `~/.claude/pickle/cache/workspace.json`.
 
-Print: `👤 Authenticated as: [MY_USERNAME] in workspace [WORKSPACE_ID]`
+```
+If workspace.json exists AND members_cached_at + 24h > now:
+  → MY_USER_ID = resolve from hierarchy call (always needed for auth)
+  → ALL_MEMBERS = cache.members  ← SKIP clickup_get_workspace_members
+  → WORKSPACE_ID = cache.workspace_id  ← SKIP hierarchy for workspace ID
+  Print: "👤 Members loaded from cache ([N] members, cached [X]h ago)"
+
+Else:
+  → Call clickup_get_workspace_hierarchy → WORKSPACE_ID, MY_USER_ID
+  → Call clickup_get_workspace_members → ALL_MEMBERS[]
+  → Write to ~/.claude/pickle/cache/workspace.json
+  Print: "👤 Members fetched fresh from ClickUp ([N] members)"
+```
+
+Always call `clickup_get_workspace_hierarchy` for `MY_USER_ID` auth — don't cache auth tokens.
 
 ---
 
-## STEP 2 — DISCOVER THE CHANNEL
+## STEP 2 — DISCOVER CHANNEL (cache-first)
 
-Call `clickup_get_chat_channels` (workspace-level). 
+**Check shared cache first:**
 
-Fuzzy-match `CHANNEL_NAME` against channel names:
-- Exact match first
-- Then partial match (contains CHANNEL_NAME)
-- Then slug match (strip spaces/special chars)
-
-If no match → print:
 ```
-❌ Channel "#[CHANNEL_NAME]" not found.
-Available channels: [list names]
-Try: /pickle-report [exact-name] [window]
-```
-Then stop.
+If workspace.json.channels[CHANNEL_NAME or channel_id] exists AND channels_cached_at + 6h > now:
+  → CHANNEL_ID, CHANNEL_FULL_NAME from cache ← SKIP clickup_get_chat_channels
+  Print: "📡 Channel loaded from cache"
 
+Else:
+  → Call clickup_get_chat_channels. Fuzzy-match CHANNEL_NAME.
+  → Write channels to ~/.claude/pickle/cache/workspace.json
+```
+
+If channel not found after fresh fetch → list available channels and stop.
 Store `CHANNEL_ID`, `CHANNEL_FULL_NAME`.
 
 ---
 
 ## STEP 3 — BUILD TEAM ROSTER
 
-From the channel info or `clickup_get_chat_channel` response, extract the list of members in the channel.
-
-Cross-reference with `ALL_MEMBERS[]` to build `TEAM[]`:
-```
-TEAM[] = [
-  { id, username, display_name, email }
-]
-```
-
-**Exclude:** bots, integrations, Aditya himself (MY_USER_ID) from the analysis subjects. Aditya is the observer, not the analysed.
-
-If the channel API doesn't return members directly, infer from messages in Step 4A — any user who posted in the channel in the last 30 days is a team member.
-
-Print: `👥 Team members identified: [count] — [name1, name2, ...]`
+Build `TEAM[]` from channel members, excluding the authenticated user (MY_USER_ID resolved in Step 1) and bots.
+If API doesn't return members → infer from message authors in Step 4A.
 
 ---
 
-## STEP 4 — COLLECT ALL DATA (parallel where possible)
+## STEP 4 — COLLECT ALL DATA
 
 ### 4A — Channel messages
+Call `clickup_get_chat_channel_messages`. Paginate until older than `TIME_CUTOFF_S`.
+Build `ALL_MESSAGES[]` grouped by user. Build `PRESENCE[user_id] = Set<date_str>`.
 
-Call `clickup_get_chat_channel_messages` with:
-- `channel_id`: CHANNEL_ID
-- Paginate until messages are older than TIME_CUTOFF_S
-- Collect up to 500 messages (safety cap)
-
-Build `ALL_MESSAGES[]`:
-```
-{
-  msg_id, user_id, display_name, text, timestamp_s,
-  date_str (YYYY-MM-DD), task_mentions ([] of task IDs if any)
-}
-```
-
-**Group by user:** `MESSAGES_BY_USER[user_id] = [messages]`
-
-**Daily presence map:** For each user, record which calendar days they posted. `PRESENCE[user_id] = Set<date_str>`
+**Holiday detection:** If a member posted "on leave", "holiday", "OOO", "out of office", or equivalent in standup → mark as `HOLIDAY = true`. Skip analysis for that person. Report as "🏖️ On leave — skipped."
 
 ### 4B — Tasks per team member
+For each member, call `clickup_filter_tasks`:
+- `assignees: [member.id]`, `date_updated_gt: TIME_CUTOFF_MS`, `include_closed: true`, `subtasks: true`
 
-For each member in TEAM[], call `clickup_filter_tasks` with:
+Also fetch open tasks (zombie check):
+- `assignees: [member.id]`, `statuses: ["open", "in progress", "to do", "new"]`, `include_closed: false`
+
+Run 4 members in parallel.
+
+### 4C — Task details (cache-first)
+
+For each task ID from 4B:
+
 ```
-assignees: [member.id]
-date_updated_gt: TIME_CUTOFF_MS
-include_closed: true
-subtasks: true
+Read ~/.claude/pickle/cache/tasks.json
+
+If tasks.json[task_id] exists AND cached_at + 1h > now AND date_updated_ms matches:
+  → Use cached task data ← SKIP clickup_get_task
+Else:
+  → Call clickup_get_task(task_id)
+  → Write result to tasks.json[task_id] with cached_at = now
 ```
 
-**Also** fetch tasks that are open/in-progress regardless of `date_updated` (to catch zombie tasks):
-```
-assignees: [member.id]
-statuses: ["open", "in progress", "to do", "in review"]
-include_closed: false
-```
-
-Merge, deduplicate by task ID. Store in `TASKS_BY_USER[user_id] = [task_summary]`.
-
-Run at most 4 members in parallel to stay within rate limits.
-
-### 4C — Task details
-
-For each task collected in 4B, call `clickup_get_task` with `task_id`. Extract:
+Extract per task:
 ```
 {
-  id, name, status, description,
-  date_created_ms, date_updated_ms, due_date_ms,
+  id, name, status, description (text_content),
   time_spent_ms, time_estimate_ms,
-  assignees, creator,
-  list_name, space_name,
-  has_description: (description?.trim().length > 20),
-  days_since_update: Math.floor((Date.now() - date_updated_ms) / 86400000)
+  date_updated_ms, due_date_ms,
+  priority, list_name
 }
 ```
 
-**Also** call `clickup_get_task_comments` for each task. Count comments from the assigned user in the window (self-updates). Store `self_comment_count`.
+**Known zombies from report-memory:** Before looping tasks, check `REPORT_MEMORY[CHANNEL_NAME][member_id].known_zombie_ids[]`. Any task ID in that list that is STILL open → already flagged in a previous report. Note "recurring zombie (first seen [date])" — stronger signal than a new zombie.
 
-Batch 8 task detail calls in parallel. Rate-limit: add 200ms delay between batches if > 20 tasks total.
+Also call `clickup_get_task_comments` for each task → collect self-comments from the assignee.
 
----
+Batch 8 in parallel. Skip the `clickup_get_task` call for any task that is cache-fresh (date_updated_ms unchanged).
 
-## STEP 5 — COMMITMENT EXTRACTION (per person)
+### 4D — TIME ENTRIES PER MEMBER ⭐ (critical step)
 
-For each user in TEAM[], analyse their `MESSAGES_BY_USER[user_id]` messages.
+**TRULY DONE DEFINITION (three-part standard):**
+A task is only TRULY DONE when ALL three are true:
+1. Status = closed / completed / done / released
+2. Description exists AND reflects actual work done (not blank, not just the original brief)
+3. Time was tracked (time_spent_ms > 0)
 
-**For each message, classify segments into:**
+Labels per task:
+- ✅ TRULY DONE — status closed + description filled + time tracked
+- ⚠️ GHOST CLOSURE — status closed but description empty (claimed done, no evidence trail)
+- ⚠️ UNTRACKED COMPLETION — status closed + description exists but time_spent = 0
+- ❌ NOT DONE — status open but person claimed completion in standup
 
-**A. COMMITMENT** — "will do / taking up / starting / I'll finish / working on today"
-  - Signals: "will", "gonna", "taking up", "picking up", "starting on", "I'll", "going to", "by EOD", "by today", "by tomorrow", "by [date]"
-  - Extract: what they said they'd do (task name or description)
+**TIME JUSTIFICATION CHECK:**
+After computing time_spent per task, evaluate proportionality:
+- time_spent > 8h + description empty → flag: "Xh logged on [task] with no description — if genuine, please explain in the task card what took X hours"
+- time_spent > 40h + status not done → flag: "Xh in and still open — is scope larger than expected? Add current state + blockers to description"
+- time_spent seems disproportionate to task type → comment: "Was this much time needed for [task type]? If yes, that context belongs in the description"
+- time_spent = 0 on tasks person mentioned in standup → flag: no time tracking despite claiming work done
 
-**B. COMPLETION** — "done / completed / finished / pushed / delivered / live / shipped"
-  - Signals: "done ✅", "completed", "finished", "pushed", "live", "delivered", "shipped", "submitted", "sent"
-  - Extract: what they claim to have completed
+Note: Time entry descriptions (per-session notes) vs task description are separate checks. Both matter.
+NEVER include salary, revenue, employment/leaving plans, or personal status in the channel report.
 
-**C. BLOCKER** — "blocked / stuck / waiting for / can't proceed / need help"
-  - Signals: "blocked", "stuck", "waiting for", "can't", "need X before", "dependent on"
-  - Extract: what they're blocked on + who/what is blocking
 
-**D. DELAY** — "taking longer / postponed / pushed / couldn't complete / delayed"
-  - Signals: "taking longer", "pushed to", "couldn't", "delayed", "missed", "will do tomorrow", "not yet done"
-  - Extract: what was delayed + original commitment if traceable
+For each member, call the ClickUp Time Tracking API:
 
-**E. STATUS UPDATE** — "X is at 50% / working on / in progress / reviewing"
-  - Signals: "%", "in progress", "reviewing", "WIP", "working", "almost done"
-
-**F. NOISE** — greetings, emojis-only, off-topic, links shared, replies to others not related to work
-
-Build per user:
 ```
-COMMITMENTS[user_id] = {
-  commitments: [{ text, date, raw_message }],
-  completions: [{ text, date }],
-  blockers: [{ text, blocking_factor, date }],
-  delays: [{ text, original_commitment, date }],
-  updates: [{ text, date }]
+GET https://api.clickup.com/api/v2/team/{WORKSPACE_ID}/time_entries
+  ?start_date={TIME_CUTOFF_MS}
+  &end_date={Date.now()}
+  &assignee={member.id}
+```
+
+**If this endpoint is not available via MCP** → use `clickup_filter_tasks` time_spent_ms as a proxy. Note in report: "Individual time entry descriptions could not be verified — team should ensure all time entries include descriptions."
+
+For each time entry returned:
+```
+{
+  id, task_id, task_name,
+  duration_ms,
+  description: string (the time entry note),
+  start_ms, end_ms
 }
 ```
 
-**Hinglish / informal language handling:** Also detect:
-- "kar lunga" → COMMITMENT
-- "ho gaya" / "done hai" → COMPLETION
-- "atak gaya" → BLOCKER
-- "kal karta hun" → DELAY
-- "chal raha hai" → STATUS UPDATE
+**Build per member:**
+```
+TIME_ENTRIES[user_id] = [
+  { task_id, task_name, duration_ms, description, has_description: desc.trim().length > 3 }
+]
+
+TOTAL_TRACKED_MS[user_id] = sum(duration_ms)
+ENTRIES_WITHOUT_DESC[user_id] = entries where has_description == false
+```
+
+**This is the primary evidence layer.** A standup claim is only VERIFIED if:
+- Time was tracked in the window on a matching task
+- The time entry has a meaningful description (not empty, not ".", not a single word)
 
 ---
 
-## STEP 6 — TASK ANALYSIS (per person)
+## STEP 5 — COMMITMENT EXTRACTION + VERIFICATION
 
-For each user in TEAM[], analyse their task list:
+For each member, analyse their standup messages. Classify:
 
-### 6A — Task status classification
-Categorise each task:
-- `COMPLETED`: status = done / closed / complete / finished
-- `ACTIVE`: status = in progress / in review / active
-- `STALE_OPEN`: status = open / to do AND `days_since_update >= ZOMBIE_TASK_DAYS`
-- `OPEN_FRESH`: status = open AND `days_since_update < ZOMBIE_TASK_DAYS`
-- `OVERDUE`: has `due_date_ms < Date.now()` AND not completed
-- `BLOCKED_LABEL`: has "blocked" in status or labels
+**COMMITMENT** — "I'll do / working on / taking up / by EOD"
+**COMPLETION** — "done / completed / pushed / live / shipped / ho gaya / kar diya"
+**BLOCKER** — "blocked / stuck / waiting for / atak gaya"
+**DELAY** — "delayed / pushed to / couldn't complete / kal karta hun"
+**STATUS** — "in progress / reviewing / at X% / WIP"
 
-### 6B — Time efficiency per task
+Then for each COMMITMENT and COMPLETION, verify against TIME_ENTRIES:
 ```
-if time_estimate_ms > 0:
-  time_efficiency = time_estimate_ms / time_spent_ms
-  // > 1.0 = came in under budget (good)
-  // 0.7–1.0 = slight over (acceptable)
-  // < 0.7 = significant overrun (flag)
-  // < 0.5 = major overrun (strong flag)
-
-else:
-  time_efficiency = null // no estimate to compare
+EVIDENCE_LEVEL:
+  VERIFIED   = standup mentioned task + time entry found + description exists
+  PARTIAL    = standup mentioned task + time entry found BUT no description
+  WEAK       = standup mentioned task + task was updated BUT no time entry logged
+  UNVERIFIED = standup mentioned task + no matching time entry found at all
 ```
 
-### 6C — Description + update quality
-```
-description_score:
-  0 = no description or < 20 chars
-  1 = has description but no updates (static)
-  2 = has description with progress notes
-  3 = well-documented with context, approach, blockers noted
-
-self_update_score: self_comment_count in window
-  0 = no comments from assignee
-  1 = 1 comment
-  2 = 2+ comments
-```
-
-### 6D — Zombie task detection
-A task is a **zombie** if:
-- Assigned to this person
-- Status is not complete/closed
-- `days_since_update >= ZOMBIE_TASK_DAYS`
-- Created before TIME_CUTOFF (not brand new)
-
-Zombies are the clearest signal that work is being ignored.
+**Special cases:**
+- If time tracked on a task NOT mentioned in standup → "unreported work" (neutral, note it)
+- If time tracked on task but status unchanged → "time logged but card not updated" (flag)
+- If total tracked time is 0 for the window → "no time tracked" (flag if they posted standup)
+- If task description is empty despite time tracked → flag for task hygiene
 
 ---
 
-## STEP 7 — CROSS-REFERENCE (promise vs reality)
+## STEP 6 — TASK HYGIENE ANALYSIS
 
-For each user, match COMMITMENTS to TASKS:
+For each task a member worked on:
 
-**Algorithm:**
-1. For each `commitment.text`, do keyword overlap with task names:
-   - Tokenize both (lowercase, remove stop words)
-   - If overlap ≥ 2 keywords → probable match
-   - If overlap == 1 + context match → possible match
-   - No overlap → unmatched commitment (shadow work or no task created)
+**Zombie check:** `days_since_update >= zombie_task_days (5)` AND not complete → zombie
 
-2. Build per user:
+**Description quality:**
+- Score 0: empty or < 10 chars
+- Score 1: has original brief but no progress notes
+- Score 2: has progress notes
+- Score 3: well-documented with approach, blockers, current state
+
+**Time entry description requirement:**
+Every time entry should have a description. Flag count:
+`EMPTY_ENTRY_FLAGS = ENTRIES_WITHOUT_DESC[user_id].length`
+
+If any entries empty → note: "@[name] — X time entries have no description. Please add what was done for each session."
+
+**Overdue tasks:**
+Any task where `due_date_ms < Date.now()` AND status not complete → flag with days overdue.
+
+**Task status vs claimed work:**
+If member said "I worked on X" AND time was logged on X AND X is still "new" → flag: "Task status not updated despite time tracked."
+
+---
+
+## STEP 7 — CROSS-REFERENCE (standup vs reality)
+
+For each member, build `CROSS_REF`:
 ```
-CROSS_REF[user_id] = {
-  matched: [{commitment, task, task_status}],
-  unmatched_commitments: [{commitment}],  // said it but no task exists / can't find
-  unmatched_completions: [{completion}],  // claimed done but task still open
-  blockers_unescalated: [{blocker}]       // said blocked but no comment on task
-}
+VERIFIED_WORK    = commitments with VERIFIED or PARTIAL evidence
+UNVERIFIED_CLAIMS = commitments with WEAK or UNVERIFIED evidence  
+STATUS_GAPS      = tasks where time_spent > 0 but status = new/to-do
+TIME_ENTRY_GAPS  = entries with no description
+ZOMBIE_TASKS     = tasks with days_since_update >= 5
+OVERDUE_TASKS    = tasks past due date
 ```
 
-**Key gap signals:**
-- `unmatched_commitments` > 0 → either no task was created, or task exists in a list we couldn't access
-- `unmatched_completions` > 0 → task still shows "open" but person claimed done (data hygiene issue)
-- `blockers_unescalated` > 0 → blocker mentioned in chat but not logged on the task card
+**Fake tracking signal (flag ALL of these):**
+- Time tracked > 2h in window BUT task status never changed AND description empty AND no meaningful comments from assignee
+- Claimed completion in standup but task still open with no self-comment explaining why
 
 ---
 
 ## STEP 8 — SCORE EACH PERSON
 
-For each user, compute:
+Only score if sufficient data exists. If `TOTAL_TRACKED_MS = 0` AND no tasks updated → mark as `NO_DATA`.
 
 ```
-# Delivery rate
-commitments_made = COMMITMENTS[uid].commitments.length
-commitments_delivered = CROSS_REF[uid].matched.filter(m => m.task_status == COMPLETED).length
-  + COMMITMENTS[uid].completions.length (self-reported completions with matching tasks)
-delivery_rate = commitments_made > 0
-  ? commitments_delivered / commitments_made
-  : 1.0 (no commitments made → neutral, not 0)
+# Delivery rate — based on verified execution, not standup claims
+verified_count     = VERIFIED_WORK.length
+commitment_count   = total commitments made in standup
+delivery_rate      = commitment_count > 0 ? verified_count / commitment_count : 1.0
 
-# Time efficiency (avg across tasks with estimates)
-time_efficiencies = tasks with time_estimate > 0 → compute per task
-avg_time_efficiency = mean(time_efficiencies) || null
+# Time entry quality — how well do they document their time
+total_entries      = TIME_ENTRIES[uid].length
+documented_entries = entries with has_description == true
+time_doc_rate      = total_entries > 0 ? documented_entries / total_entries : null
 
-# Update compliance (how well they document their work)
-tasks_with_updates = tasks where (self_comment_count >= 1 OR description_score >= 2)
-update_compliance = tasks_assigned > 0
-  ? tasks_with_updates / tasks_assigned
-  : 1.0
+# Update compliance — task card quality
+tasks_with_updates = tasks where (description_score >= 2 OR self_comment_count >= 1)
+update_compliance  = tasks_assigned > 0 ? tasks_with_updates / tasks_assigned : 1.0
 
-# Channel presence (days active / working days in window)
-working_days = WINDOW_DAYS (weekends excluded if detectable, else use raw days)
-presence_score = PRESENCE[uid].size / Math.min(working_days, WINDOW_DAYS)
+# Presence
+presence_score = PRESENCE[uid].size / WINDOW_DAYS
 
-# Overall score (weighted)
+# Overall
 overall_score = (
-  delivery_rate      * 0.40 +
-  update_compliance  * 0.30 +
-  presence_score     * 0.20 +
-  (avg_time_efficiency != null ? Math.min(avg_time_efficiency, 1.5) / 1.5 : 0.7) * 0.10
+  delivery_rate     * 0.35 +
+  update_compliance * 0.30 +
+  (time_doc_rate ?? 0.5) * 0.15 +  # time entry documentation
+  presence_score    * 0.20
 )
 ```
 
-**Status label:**
-- `>= 0.85` → 🟢 On track
-- `0.70–0.84` → 🟡 Needs attention
-- `0.55–0.69` → 🟠 Underperforming
-- `< 0.55` → 🔴 Critical — flag Aditya immediately
+**Status labels:**
+- ≥ 0.85 → 🟢 On track
+- 0.70–0.84 → 🟡 Needs attention
+- 0.55–0.69 → 🟠 Underperforming
+- < 0.55 → 🔴 Critical
 
-**Flags (per person):**
-Raise a flag if ANY of:
-- `delivery_rate < efficiency_threshold (0.60)`
-- `zombie_tasks.length >= 2`
-- `unmatched_completions.length >= 2` (claims work done, task says otherwise)
-- `presence_score < presence_threshold (0.40)` → ghost mode
-- Any task overdue > 7 days with no comment
-- Blocker mentioned but never escalated or resolved
+**Important:** Do not assign a high score without time-backed evidence. If time entries are unavailable (API limitation), note "Score unverifiable — time entry descriptions not accessible" and lean conservative.
 
----
-
-## STEP 9 — PATTERN ANALYSIS (local memory)
-
-Load `TEAM_STATE.members[user_id].reports[]` (previous runs).
-
-For each member with history:
-- `avg_delivery_rate` = mean of last 3 reports
-- `trend` = improving / stable / declining (compare latest to avg)
-- `recurring_flags` = flags that appear in ≥ 2 consecutive reports → PATTERN
-
-If pattern detected (e.g. always late on audit tasks, always ghosts on Fridays):
-- Note it in the report with more weight
-- Tag Aditya explicitly: "This is a recurring pattern, not a one-off."
-
-If no previous history → this is the first report, note baseline only.
+**Flag triggers:**
+- `delivery_rate < 0.60` → HIGH
+- `zombie_tasks >= 2` → HIGH
+- `presence_score < 0.40` → HIGH (ghost mode)
+- `EMPTY_ENTRY_FLAGS >= 3` → MEDIUM (chronic no-description habit)
+- `overdue_tasks >= 1 with no self-comment` → MEDIUM
+- `status_gaps >= 2` (time tracked, status still new) → MEDIUM
+- `time tracked = 0 in window, task open` → LOW
 
 ---
 
-## STEP 10 — BUILD THE REPORT
+## STEP 9 — PATTERN ANALYSIS
 
-Construct two versions:
-1. **CHANNEL_REPORT** — to post to ClickUp channel (formatted for ClickUp rich text, tagged)
-2. **LOCAL_SUMMARY** — printed to terminal with full detail
+Load `TEAM_STATE.members[uid].reports[]` (previous runs).
+Detect if same flag appears ≥ 2 consecutive reports → PATTERN.
+Patterns get stronger language in the report + direct flag to Aditya.
 
-### CHANNEL_REPORT format:
+---
+
+## STEP 10 — BUILD REPORT
+
+### Channel message format
+
+**No overall header. No /pickle-report footer. Start directly with team performance blocks.**
+
+**CRITICAL FORMATTING RULE:** Do NOT truncate or shorten blocks. Every flag must cite the exact task name, task link, exact hours tracked, days stale, and specific evidence. Vague summaries are rejected. Write every block as if Aditya will read it alongside the task card — it must be specific enough to act on immediately without opening ClickUp.
+
+**Per-person block format (canonical — do not deviate):**
 
 ```
-📊 Team Pulse — [CHANNEL_FULL_NAME]
-[WINDOW_LABEL] | Generated by Pickle 🥒
+━━━━━━━━━━━━━━━━━━━━━━━━━
+@[Name] [STATUS_EMOJI] [Status label] — [one-line summary]
+━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Hey team — here's the weekly performance check-in. This is a data-driven 
-look at how tasks and commitments tracked this week. Let's keep each 
-other honest and moving. 💪
+📋 Said [date of most recent standup]:
+[Exact bullet-point summary of what they said they worked on and plan to do]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[REPEAT PER MEMBER — sorted by score desc]
+📋 Week in review ([date range]):
+[Day-by-day or grouped summary of standup activity — what they said each day, patterns noted]
 
-👤 @[username] · [STATUS LABEL]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Delivered ([N]): [task names, comma-sep, max 3 then "+ N more"]
-⏳ Pending ([N]): [commitments made but task not complete, with days since]
-🧟 Inactive tasks ([N]): [zombie task names — no updates in N days]
-[ONLY IF time data exists] 🕐 Time: [Xh tracked] | [Yh estimated] ([+Z% over / under])
-📝 Task updates: [tasks_with_updates / total_assigned] tasks documented
-💬 Active: [N of M days]
+📊 Verified output:
+• [Task name] [link] — [status] ✅/⚠️/❌ — [Xh tracked] — [note]
+• [Task name] [link] — [status] ✅ — [Xh tracked] — [note: desc present/empty, comments present/absent]
+[List everything verifiably done with evidence]
 
-[IF flags exist]:
-⚠️ Notes: [specific observation — 1 sentence, non-offensive]
-[IF recurring pattern]:
-📌 Pattern: [describe the trend in 1 sentence]
-[END IF]
+❌ Overdue deliverables: (only if applicable)
+1. [Task name] [link]
+   Priority: [URGENT/HIGH/NORMAL]
+   Due: [original due date] — [X days/months overdue]
+   Status: "[current status]"
+   Time tracked: [Xh]
+   [Specific question or observation — was this completed? abandoned? why no update?]
 
-[END REPEAT]
+🧟 Zombie tasks — [N] tasks stale 5+ days, not complete: (only if applicable)
+Notable:
+• [link] — [Task name] — [X] days stale — [Xh tracked] — [description status]
+• [link] — [Task name] — [X] days stale — [Xh tracked] — [description status]
+[List top offenders with links, hours, and days stale]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 Flagged for @[MY_USERNAME]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[ONLY IF any flags exist — list each flag as bullet]
-• @[name] — [specific issue, e.g. "3 zombie tasks, no updates in 6 days"]
-• @[name] — [task name overdue N days — no comment since creation]
-[If no flags: omit this entire section]
+📝 Descriptions:
+• [X] of [Y] tasks have zero description on time entries
+• [Specific task] [link] — [Xh tracked, no description] — [what question this raises]
+• [Pattern note if applicable]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Team Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Team size: [N] · Avg delivery: [X%] · Avg time efficiency: [Y%]
-Tasks this week: [total] ([completed], [in progress], [stale])
-[If top performer]: ⭐ Top performer: @[username] — [brief reason]
+Truly Done check:
+• [Task name] → ✅ TRULY DONE / ⚠️ GHOST CLOSURE / ⚠️ UNTRACKED COMPLETION / ❌ NOT DONE
+  (Truly Done = status closed + description filled + time tracked — all three required)
+[If 0h tracked despite standup claim: flag explicitly]
+[If hours disproportionate to task type: "Xh on [task type] — was this much time needed? If yes, please explain in the task description"]
 
-If you're blocked or behind, update your task card and reply here — 
-that's all it takes. Let's close out the week strong. 🚀
+🔴 Blockers: (always include this section — "None" if clear)
+• [Blocker description] — logged on card: yes/no
+• Or: None identified
 
-/pickle-report · [CHANNEL_FULL_NAME] · Pickle by Aditya Sharma
+📌 Things from Aditya for [Name]: (always include — things Aditya must do/send/decide to unblock this person)
+• [Specific action Aditya owes] — task link if exists
+• Or: None currently — no open dependencies from Aditya's side
+
+✅ Verdict: [Work verified / Partially verified / Not verifiable / On leave] — [1-2 sentence summary of why]
+
+Score: [X%] — [🟢 On track / 🟡 Needs attention / 🟠 Underperforming / 🔴 Critical]
+Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
+
+💬 Action items for @[Name]:
+1. [Specific ask with task link — what to do, on which card, by when]
+2. [Specific ask]
+3. [Specific ask if needed]
 ```
 
-### Tone rules (enforce strictly):
-- ❌ Never: "you failed", "you didn't", "you lied", "you're lazy"
-- ✅ Always: "I notice X isn't updated", "This task has been open N days without activity", "We might want to check in on this"
-- Frame gaps as data observations, not moral failures
-- Good work gets called out first — always lead with ✅ Delivered
-- Flags section is factual, not emotional
+**Rules for every block:**
+- Every flagged task must include its ClickUp link (https://app.clickup.com/t/...)
+- Every zombie task entry must list: link, days stale, hours tracked, description status
+- Every overdue deliverable must state exact due date, how long overdue, time tracked, and a specific question
+- "Things from Aditya" section is MANDATORY per person — shows dependencies Aditya must clear
+- "Blockers" section is MANDATORY per person — "None" is a valid entry
+- Time entry description count must be stated as X/Y (e.g. "3 of 12 time entries have descriptions")
+- If hours seem disproportionate to task complexity — call it out directly: "Xh on [task type] — was this much time needed? If yes, please explain in the task description what took that long"
+- NEVER truncate or eat words. A short block means not enough data was pulled — go back and pull more.
+
+Note: NEVER include salary, revenue, resignation/leaving plans, or personal employment details in the channel report. Those stay in the "For Aditya" Claude Code section only.
+
+### Tone rules
+- Never: "you lied", "you did nothing", "that's lazy"
+- Always: cite the data ("I see Xh tracked on task Y, but status is still 'new'")
+- Good work first, then gaps
+- Questions over accusations ("Can you update the card to reflect progress?")
+- If recurring pattern: note it once, don't repeat across blocks
+
+### For Aditya section (private — Claude Code only, never posted to channel)
+
+After all member blocks, render:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━
+For Aditya — Private flags
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 [Name] — [Critical flag] — [task link] — [specific action required]
+🟠 [Name] — [Flag] — [task link] — [what Aditya must do]
+🟡 [Name] — [Flag] — [task link] — [what Aditya must do]
+
+What Aditya needs to do today:
+• [Action 1 — task link]
+• [Action 2 — task link]
+• [Action 3 — task link]
+```
+
+Include: hiring gaps, departure handoffs, tasks Aditya is blocking, approval requests awaiting Aditya, private personnel flags (leaving dates, performance concerns for direct conversation). These NEVER go in the channel message.
 
 ---
 
 ## STEP 11 — POST TO CHANNEL
 
-Call `clickup_send_chat_message` with:
+Append the following watermark as the last 3 lines of CHANNEL_REPORT before sending:
+
 ```
-channel_id: CHANNEL_ID
-message: [CHANNEL_REPORT full text]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Made with Pickle 🥒 · Built by Aditya Sharma
+In a pickle? Pickle sorts it.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-If the ClickUp MCP supports rich text / markdown for messages, use that. Otherwise send as plain text — the formatting still reads well.
+Call `clickup_send_chat_message`:
+- `channel_id`: CHANNEL_ID
+- `content`: CHANNEL_REPORT (with watermark appended)
 
-On success: print `✅ Report posted to #[CHANNEL_FULL_NAME]`
-On failure: print the full report to terminal and log the error. Do NOT retry more than once.
+**IMPORTANT:** Always wait for Aditya's confirmation before posting. Say "Ready to post — confirm?" and wait.
+
+On success: `✅ Posted to #[CHANNEL_FULL_NAME]`
+On failure: print report to terminal, note error.
 
 ---
 
 ## STEP 12 — SAVE STATE
 
-Update `/Users/adityasharma/.claude/skills/pickle-report/state.json`:
+**12A — Update scores history:**
+Update `~/.claude/skills/pickle-report/state.json` with current run scores, flags, and patterns.
+Rolling 12-report history per member. Recalculate `avg_delivery_rate_3r`, `trend`, `recurring_flags` after each write.
+
+**12B — Update report memory (shared cache):**
+Write to `~/.claude/pickle/cache/report-memory.json`:
 
 ```json
 {
-  "teams": {
-    "[CHANNEL_NAME]": {
-      "channel_id": "...",
-      "channel_name": "...",
-      "workspace_id": "...",
-      "last_report_at": "[ISO timestamp]",
-      "report_count": [incremented],
-      "members": {
-        "[user_id]": {
-          "name": "...",
-          "username": "...",
-          "reports": [
-            {
-              "date": "YYYY-MM-DD",
-              "window_days": N,
-              "overall_score": 0.00,
-              "delivery_rate": 0.00,
-              "avg_time_efficiency": 0.00,
-              "update_compliance": 0.00,
-              "presence_score": 0.00,
-              "commitments_made": N,
-              "commitments_delivered": N,
-              "zombie_tasks": N,
-              "flagged": true/false,
-              "flags": ["..."],
-              "status_label": "🟢 On track"
-            }
-          ],
-          "patterns": {
-            "avg_delivery_rate_3r": 0.00,
-            "trend": "improving|stable|declining",
-            "recurring_flags": ["..."],
-            "total_reports": N,
-            "total_flags": N
-          }
+  "[CHANNEL_NAME]": {
+    "[user_id]": {
+      "commitment_patterns": {
+        "words": [top 10 most-used commitment/completion words this run],
+        "avg_commitments_per_window": [rolling average],
+        "typical_tasks": [top 5 task name keywords this person works on]
+      },
+      "known_flags": {
+        "[task_id]": {
+          "task_name": "...",
+          "first_flagged": "YYYY-MM-DD",
+          "flag_count": N,
+          "flag_type": "overdue|zombie|ghost_closure|time_justification",
+          "resolved_at": null
         }
-      }
+      },
+      "known_zombie_ids": ["task_id_1", "task_id_2"],
+      "last_seen_score": 0.00,
+      "score_history": [last 6 scores],
+      "flag_history": [last 10 flags with dates]
     }
-  },
-  "global_settings": {
-    "efficiency_threshold": 0.60,
-    "presence_threshold": 0.40,
-    "zombie_task_days": 5,
-    "flag_threshold": 0.55
-  },
-  "meta": {
-    "total_reports_all_teams": N,
-    "last_updated": "[ISO timestamp]"
   }
 }
 ```
 
-Keep a **maximum of 12 report entries per member** (rolling window — drop oldest). Recalculate `patterns` after each update.
+**Resolution tracking:** If a task that was previously flagged is now TRULY DONE → set `resolved_at = today` in its known_flags entry. This shows improvement over time.
+
+**Prune entries older than 90 days** from flag_history to keep the file lean.
 
 ---
 
 ## STEP 13 — PRINT LOCAL SUMMARY
 
+Print table:
 ```
-════════════════════════════════════════════════════════
-  🥒 pickle-report · by Aditya Sharma
-  📅 [DATE] · #[CHANNEL_FULL_NAME] · [WINDOW_LABEL]
-════════════════════════════════════════════════════════
-
-TEAM PERFORMANCE SUMMARY
-
-[TABLE per person]:
-  Name        | Score | Delivery | Time Eff | Updates | Presence | Status
-  ────────────┼───────┼──────────┼──────────┼─────────┼──────────┼──────────
-  Alex        | 68%   | 60%      | 71%      | 50%     | 60%      | 🟠 Under
-  Priya       | 91%   | 100%     | 92%      | 85%     | 100%     | 🟢 On track
-
-FLAGS RAISED: [N]
-[list each flag]
-
-PATTERNS DETECTED: [N]
-[list each recurring pattern with member name]
-
-GAPS (promise vs reality):
-[list unmatched commitments and unmatched completions]
-
-Report posted to: #[CHANNEL_FULL_NAME]
-State saved: [path]
-
-════════════════════════════════════════════════════════
-  Re-run: /pickle-report [CHANNEL_NAME] [window]
-  All departments: run per channel
-  Docs: https://github.com/adityaarsharma/pickle
-════════════════════════════════════════════════════════
+Name             | Score | Delivery | Time Docs | Updates | Presence
+─────────────────┼───────┼──────────┼───────────┼─────────┼─────────
+[name]           | 87%   | 100%     | 80%       | 75%     | 100%
 ```
+
+Then: FLAGS RAISED, PATTERNS, GAPS summary, and path to state.json.
 
 ---
 
@@ -548,42 +528,38 @@ State saved: [path]
 
 | Scenario | Action |
 |----------|--------|
-| ClickUp MCP not available | Print diagnostic — check connection, token scope |
-| Channel not found | List available channels, suggest closest match, stop |
-| No messages in window | Note "No messages in window" per member — analyse tasks only |
-| No tasks found for member | Note "No ClickUp tasks found in window" — score from messages only |
-| Rate limit hit | Pause 2s, retry once. If fails again, skip and note in report |
-| Task detail call fails | Use summary data only, note "full details unavailable" |
-| Channel post fails | Print report to terminal + note "⚠️ Channel post failed — review above" |
-| state.json write fails | Print warning, continue — don't fail the whole run |
-| Zero team members found | Ask user to verify channel name and ensure members exist |
-
-**Data gaps:** If a member has no messages AND no tasks → mark as "No data — check if member is active in this channel" and flag Aditya. Don't generate a fake score.
-
----
-
-## FIRST RUN NOTES
-
-On the first run for a channel:
-- No historical comparison (skip pattern analysis)
-- Note: "Baseline report — no previous data to compare against"
-- Every score and flag is independently meaningful, just no trend context
-- State is created fresh for this channel
+| Time entries API not in MCP | Use task time_spent as proxy. Note limitation in report. Flag to add endpoint. |
+| Channel not found | List available, suggest closest, stop |
+| Member has no data at all | "No data in window — check if active in this channel" + flag |
+| Rate limit | Wait 2s, retry once |
+| Post fails | Print to terminal + note |
+| state.json write fails | Warn, continue |
 
 ---
 
 ## TOOL REQUIREMENTS
 
-**Required:** ClickUp MCP with tools:
+**Required (ClickUp MCP):**
 - `clickup_get_workspace_hierarchy`
 - `clickup_get_workspace_members`
 - `clickup_get_chat_channels`
-- `clickup_get_chat_channel`
 - `clickup_get_chat_channel_messages`
 - `clickup_filter_tasks`
 - `clickup_get_task`
 - `clickup_get_task_comments`
 - `clickup_send_chat_message`
-- `clickup_find_member_by_name` (optional, fallback for ID resolution)
 
-**Optional:** `pickle-slack-mcp` `slack_reminder_add` — can fire a Slack reminder to Aditya after the report is posted, with link to the ClickUp channel.
+**Needed but not yet in MCP — add to roadmap:**
+- ClickUp Time Tracking API: `GET /api/v2/team/{team_id}/time_entries?start_date=&end_date=&assignee=`
+  - Returns individual time entries with `description`, `duration`, `task_id` per session
+  - This is the PRIMARY data source for verifying actual work done
+  - Without this, time entry description checks are impossible
+  - **Priority: HIGH** — add this tool to pickle-mcp or request in ClickUp MCP
+
+---
+
+## FIRST RUN NOTES
+
+- No pattern history → note "Baseline run"
+- Every score and flag is independently meaningful
+- State created fresh for this channel
