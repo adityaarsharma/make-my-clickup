@@ -83,6 +83,33 @@ Pickle ships its own free open-source MCPs — no paid dependencies:
 
 ClickUp data and Slack data stay completely separate — never mixed.
 
+---
+
+## Pickle Manager — Team Performance Reports
+
+```
+/pickle-report marketing-hq        # weekly report for the marketing team
+/pickle-report engineering-hq 14d  # 2-week view for engineering
+/pickle-report design-hq 7d        # design team pulse
+```
+
+Pickle Manager scans what your team said they'd do (ClickUp chat) vs what they actually tracked (task cards, time logs, comments). Per person: delivery rate, time efficiency, update compliance, channel presence. Posts a smart, non-offensive report back to the department channel. Flags underperformers to you directly.
+
+**What it analyses:**
+- 📋 Commitments made in chat → matched to real task completion
+- 🕐 Time tracked vs estimated (per-task efficiency)
+- 🧟 Zombie tasks — assigned but untouched for 5+ days
+- 💬 Task documentation quality (descriptions, progress comments)
+- 👻 Ghost mode — team members silent for 40%+ of the window
+- 📉 Trends over time — is someone consistently slipping, or improving?
+
+**What it posts:**
+A structured report in the department's ClickUp channel (from your account), tagging each team member with their individual summary. Flags section for your eyes — anything that needs a direct conversation.
+
+**Local memory:** Stores efficiency trends per person. After 3+ runs, detects recurring patterns and escalates with appropriate weight.
+
+> **Scope:** POSIMYTH ClickUp only (for now). Requires ClickUp MCP connected.
+
 ## Update
 
 ```
@@ -178,6 +205,7 @@ No corner left unscanned.
 rm -rf \
   ~/.claude/skills/pickle-clickup \
   ~/.claude/skills/pickle-slack \
+  ~/.claude/skills/pickle-report \
   ~/.claude/skills/pickle-setup \
   ~/.claude/skills/pickle-update \
   ~/.claude/pickle-mcp \
