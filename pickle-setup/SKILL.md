@@ -1,6 +1,6 @@
 ---
 name: pickle-setup
-description: Guided onboarding for Pickle. Installs either the Manager version (pickle-report, pickle-clickup, pickle-slack) or the Team Member version (pickle-me) depending on the argument passed. Usage: /pickle-setup manager OR /pickle-setup team. The install link in the README determines which version the user gets — team members never see manager commands and vice versa.
+description: Guided onboarding for Pickle. Detects whether the user is a Manager or Team Member and installs accordingly. Team gets pickle-clickup + pickle-update. Manager gets pickle-clickup + pickle-slack + pickle-report + pickle-update. Self-deletes once setup is complete. Usage: /pickle-setup manager OR /pickle-setup team
 argument-hint: manager | team
 disable-model-invocation: true
 ---
@@ -33,7 +33,7 @@ Read `$ARGUMENTS`.
 If $ARGUMENTS contains "team" (case-insensitive):
   PICKLE_VERSION = "team"
   INSTALL_REPORT = false
-  INSTALL_ME     = true
+  INSTALL_ME     = false   ← pickle-me is gone; team gets pickle-clickup only
 
 Else if $ARGUMENTS contains "manager":
   PICKLE_VERSION = "manager"
@@ -43,18 +43,14 @@ Else if $ARGUMENTS contains "manager":
 Else:
   Print:
   ────────────────────────────────────────────────────
-  ❌  Missing version argument.
+  ❌ Missing version argument.
 
-  This setup link is incomplete. Use the correct link:
+  Use the correct install command from the README:
 
-    Manager install:
-    Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup manager
+    Manager:  /pickle-setup manager
+    Team:     /pickle-setup team
 
-    Team member install:
-    Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup team
-
-  Contact the person who gave you this install link
-  and ask for the correct one.
+  Contact the person who shared this with you if unsure.
   ────────────────────────────────────────────────────
   STOP — do not continue.
 ```
@@ -68,11 +64,11 @@ If `PICKLE_VERSION = "team"`:
   In a pickle? Pickle sorts it.
 ════════════════════════════════════════════════════
 
-I'll set up your personal daily task briefing.
+I'll set up your task inbox tools.
 About 2 minutes. No scripts, no terminal, no docs.
 
-You'll get: /pickle-me — your board, overdue items,
-standup gaps, and blockers, every morning.
+You'll get: /pickle-clickup (ClickUp inbox) and
+optionally /pickle-slack (Slack inbox) if your team uses Slack.
 
 Let's start.
 ```
@@ -87,8 +83,8 @@ If `PICKLE_VERSION = "manager"`:
 I'll set up your team performance tools.
 About 3 minutes. No scripts, no terminal, no docs.
 
-You'll get: /pickle-report (weekly team pulse),
-/pickle-clickup and /pickle-slack (your personal inbox).
+You'll get: /pickle-clickup (ClickUp inbox),
+/pickle-slack (Slack inbox), /pickle-report (team pulse).
 
 Let's start.
 ```
@@ -96,13 +92,11 @@ Let's start.
 Then ask:
 
 > **What's your name?**
-> (First name is fine — I'll use it to personalise your reports.)
+> (First name is fine — I'll use it to personalise your setup.)
 
 Store as `USER_NAME`.
 
-**If `PICKLE_VERSION = "team"` → skip STEP 0.5 entirely** (role scoring not needed for personal briefing). Jump to STEP 1 (ecosystem — always ClickUp for team version).
-
-**If `PICKLE_VERSION = "manager"` → continue to STEP 0.5.**
+Both versions continue to STEP 0.5.
 
 ---
 
@@ -230,15 +224,20 @@ Skills map (determined by `PICKLE_VERSION` argument + `ECO_CHOICE`):
 
 | PICKLE_VERSION | ECO_CHOICE | Skills to install |
 |----------------|------------|-------------------|
-| `team` | clickup (hardcoded) | `pickle-me`, `pickle-mcp` (if token path) |
-| `manager` | clickup | `pickle-clickup`, `pickle-report`, `pickle-mcp` (if token path) |
-| `manager` | both | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-mcp` (if token path) |
+| `team` | clickup | `pickle-clickup`, `pickle-update` |
+| `team` | slack | `pickle-slack`, `pickle-update` |
+| `team` | both | `pickle-clickup`, `pickle-slack`, `pickle-update` |
+| `manager` | clickup | `pickle-clickup`, `pickle-report`, `pickle-update` |
+| `manager` | slack | `pickle-slack`, `pickle-report`, `pickle-update` |
+| `manager` | both | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-update` |
+| any | token path | add `pickle-mcp` to above |
 
 Rules:
-- **ALWAYS install `pickle-update`** regardless of version — the one-command updater.
-- **`team` install never gets `pickle-report`, `pickle-clickup`, or `pickle-slack`** — those are manager-only.
-- **`manager` install never gets `pickle-me`** — keep the palette clean.
-- **`pickle-me` is always ClickUp only** — no Slack for team version (for now).
+- **Only install skills for the ecosystems the user chose.** If they picked ClickUp only — no `pickle-slack` goes on disk. If Slack only — no `pickle-clickup`. Never install unused ecosystem skills.
+- **`pickle-report` is manager-only** — never installed for team.
+- **`pickle-update` always installs** for both versions — it's how users get future updates without terminal commands.
+- **`pickle-me` does not exist** — never install it.
+- **`pickle-setup` self-deletes** at the end of Step 7.5 — the command disappears from the palette once done.
 
 **Important placement:** `pickle-mcp/` is an MCP server, not a Claude skill — it has no `SKILL.md`. It belongs in `~/.claude/pickle-mcp/`, NOT in `~/.claude/skills/`. Putting it under `skills/` clutters the folder with something that isn't a skill.
 
@@ -727,11 +726,14 @@ Before showing the closing summary, verify the final command palette is clean. T
 
 **Expected end state (after `/pickle-setup` self-removes at end of Step 7.5):**
 
-| Install link used | Skills that must be on disk | Skills that must NOT exist |
-|-------------------|------------------------------|-----------------------------|
-| `/pickle-setup manager` · ClickUp | `pickle-clickup`, `pickle-report`, `pickle-update`, `pickle-mcp` (if token) | `pickle-slack`, `pickle-me`, `pickle-setup` |
-| `/pickle-setup manager` · Both | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-update`, `pickle-mcp` (if token) | `pickle-me`, `pickle-setup` |
-| `/pickle-setup team` | `pickle-me`, `pickle-update`, `pickle-mcp` (if token) | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-setup` |
+| Version + Ecosystem | Skills on disk | Skills that must NOT exist |
+|---------------------|----------------|----------------------------|
+| Team · ClickUp | `pickle-clickup`, `pickle-update` | `pickle-slack`, `pickle-report`, `pickle-me`, `pickle-setup` |
+| Team · Slack | `pickle-slack`, `pickle-update` | `pickle-clickup`, `pickle-report`, `pickle-me`, `pickle-setup` |
+| Team · Both | `pickle-clickup`, `pickle-slack`, `pickle-update` | `pickle-report`, `pickle-me`, `pickle-setup` |
+| Manager · ClickUp | `pickle-clickup`, `pickle-report`, `pickle-update` | `pickle-slack`, `pickle-me`, `pickle-setup` |
+| Manager · Slack | `pickle-slack`, `pickle-report`, `pickle-update` | `pickle-clickup`, `pickle-me`, `pickle-setup` |
+| Manager · Both | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-update` | `pickle-me`, `pickle-setup` |
 
 **The `pickle-update` skill stays forever** — it's how the user gets future versions without terminal commands. Never delete it during cleanup.
 
@@ -798,28 +800,33 @@ Print a polished summary:
   Your commands
 ────────────────────────────────────────────────────
 
-  [If PICKLE_VERSION = manager or both:]
-  /pickle-report [channel]  Weekly team pulse — commitment vs delivery
-  /pickle-report [ch] 14d   Two-week view
+  [Only show commands for ecosystems the user actually installed:]
 
-  [If ECO_CHOICE includes clickup AND PICKLE_VERSION = manager or both:]
+  [If PICKLE_VERSION = manager AND ECO_CHOICE includes clickup:]
   /pickle-clickup           Scan ClickUp inbox (last 24h)
   /pickle-clickup 7d        Past week
 
-  [If ECO_CHOICE includes slack AND PICKLE_VERSION = manager or both:]
+  [If PICKLE_VERSION = manager AND ECO_CHOICE includes slack:]
   /pickle-slack             Scan Slack inbox (last 24h)
   /pickle-slack followup    Confirm + send DM reminders
 
-  [If PICKLE_VERSION = member or both:]
-  /pickle-me                Daily briefing — your tasks, overdue, gaps
-  /pickle-me 7d             Same with 7-day standup context
+  [If PICKLE_VERSION = manager:]
+  /pickle-report [channel]  Weekly team pulse — commitment vs delivery
+  /pickle-report [ch] 14d   Two-week view
 
-  [Always show:]
+  [If PICKLE_VERSION = team AND ECO_CHOICE includes clickup:]
+  /pickle-clickup           Scan ClickUp inbox (last 24h)
+  /pickle-clickup 7d        Past week
+
+  [If PICKLE_VERSION = team AND ECO_CHOICE includes slack:]
+  /pickle-slack             Scan Slack inbox (last 24h)
+  /pickle-slack followup    Confirm + send DM reminders
+
   /pickle-update            Update Pickle to the latest version
 
   (pickle-setup has removed itself — clean palette.
    To re-run setup later, paste in Claude Code:
-   "Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup")
+   "Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup [manager|team]")
 
 ────────────────────────────────────────────────────
   A few things to remember
