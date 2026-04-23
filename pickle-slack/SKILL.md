@@ -88,23 +88,16 @@ Extract:
 - `user_name`  → `USER_NAME` (e.g. "Aditya")
 - `user_role`  → `USER_ROLE` (e.g. "Founder / CEO", "Developer / Engineer")
 - `role_context` → `ROLE_CONTEXT` (free-text one-liner)
-- `slack_list_name` → `LIST_NAME` (override if set in prefs)
+**`LIST_NAME` is always: `"Task Board - By Pickle"`** — fixed, never user-configurable, never overridden by prefs.
 
-**Build `LIST_NAME`** (the Slack List display name):
-- If `slack_list_name` is set in prefs → use it as-is
-- Otherwise → construct: `"[USER_NAME]'s Task Board — Made from Pickle"`
-- If no `user_name` → fallback: `"Pickle Task Board"`
-
-Example: user_name = "Aditya" → `LIST_NAME = "Aditya's Task Board — Made from Pickle"`
-
-If missing → proceed with generic scoring and fallback name. **Never block on missing prefs.**
+If missing → proceed with generic scoring. **Never block on missing prefs.**
 
 Parse `ROLE_CONTEXT` into `ROLE_KEYWORDS[]` (action verbs + domain nouns). These boost priority in Step 6. Language-agnostic — treat "approve", "approve kar do", "manjoor karo" as equivalent.
 
 Print:
 ```
 🎯 Personalised scoring enabled — Role: $USER_ROLE · Focus: [top 8 keywords]
-📋 List name: [LIST_NAME]
+📋 List name: Task Board - By Pickle
 ```
 
 If no prefs → `🎯 Generic scoring (run /pickle-setup to personalise)`.
@@ -132,21 +125,22 @@ Print: `👤 Running as: $MY_NAME ($MY_USER_ID) in workspace $WORKSPACE_ID`
 
 ### Step 2A — Read cache from state.json FIRST
 
-Read `~/.claude/skills/pickle-slack/state.json`. Look for `_list_registry[LIST_NAME]` (where `LIST_NAME` was set in Step 0.5):
+Read `~/.claude/skills/pickle-slack/state.json`. Look for `_list_registry["Task Board - By Pickle"]`:
 
 ```json
 "_list_registry": {
-  "Aditya's Task Board — Made from Pickle": {
+  "Task Board - By Pickle": {
     "list_id": "F0AU68YL4LX",
     "col_ids": { "ColTL": "Col0AUKLBKCH4", ... }
   }
 }
 ```
 
-Also check the legacy key `"Pickle Inbox"` — if found under that key, treat it as a match (migration: old name → new name).
+Also check legacy keys `"Pickle Inbox"`, `"Aditya's Task Board — Made from Pickle"`, `"My Task Board — Made from Pickle"`, `"Pickle Task Board"` — if found under any of those, treat as a match and migrate the cache key to `"Task Board - By Pickle"` going forward.
 
 - **If found**: store `LIST_ID` and `COL_IDS` from cache. Call `slack_list_find_or_create` with `cached_list_id` + `cached_col_ids` — returns immediately, zero API calls. ✅
-- **If not found** (first ever run): call `slack_list_find_or_create` with `name: LIST_NAME` — creates the list, returns `list_id` + `col_ids`. Save both to `_list_registry[LIST_NAME]` in state.json before proceeding. ✅
+- **If not found** (first ever run): call `slack_list_find_or_create` with `name: "Task Board - By Pickle"`, `is_private: true` — creates the list as **private** (only you can see it), returns `list_id` + `col_ids`. Save both to `_list_registry["Task Board - By Pickle"]` in state.json before proceeding. ✅
+- **Privacy is mandatory:** The Slack List MUST be private. Never create or use a public list. If the API doesn't support `is_private`, note this in the output but proceed — the list name makes it self-explanatory.
 
 ### Step 2B — List columns (for reference)
 
@@ -158,7 +152,7 @@ If the tool returns `{ list_id: null }` — Slack Lists API not available. Repor
 
 **⚠️ IMPORTANT: The `pickle-slack-mcp` MCP server MUST be connected (`mcpServers["pickle-slack-mcp"]` in `~/.claude.json`). If tools are missing, tell the user to run `/pickle-setup`.**
 
-Print: `📋 [LIST_NAME]: [LIST_ID] — [cached ✓ / created fresh ✓]`
+Print: `📋 Task Board - By Pickle: [LIST_ID] — [cached ✓ / created fresh ✓] — private ✓`
 
 ---
 
@@ -658,7 +652,7 @@ Plus `slack_reminder_add` for the due date (same pattern as Mode A).
 After ALL items are created, set **one immediate Slack reminder** via `slack_reminder_add`. Reminders fire as real Slack push notifications (appear in Slackbot) — no DM needed.
 
 ```
-text:    "🥒 [LIST_NAME] is Ready!\n[N] items · Open: https://app.slack.com/lists/[WORKSPACE_ID]/[LIST_ID]"
+text:    "🥒 Task Board - By Pickle is Ready!\n[N] items · Open: https://app.slack.com/lists/[WORKSPACE_ID]/[LIST_ID]"
 time:    NOW_UNIX + 30   (current Unix timestamp + 30 seconds — fires almost instantly)
 user_id: MY_USER_ID
 ```

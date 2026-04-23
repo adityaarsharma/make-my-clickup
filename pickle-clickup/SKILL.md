@@ -164,27 +164,34 @@ Print: `👤 Running as: $MY_NAME in workspace $WORKSPACE_ID`
 
 ## STEP 2 — FIND OR CREATE PERSONAL TASK BOARD
 
-**This task board is always personal — never created inside a shared team/company space.**
+**This task board is always personal — NEVER inside a shared team/company space. No exceptions.**
+
+**`BOARD_NAME` is always: `"Task Board - By Pickle"`** — fixed, never user-configurable, never overridden by prefs.
 
 1. Call `clickup_get_workspace_hierarchy` on the workspace.
-2. From the hierarchy, identify **personal spaces** — spaces where the only member is `MY_USER_ID` (or space name matches "Private", "Personal", or `MY_NAME`).
-**Build `BOARD_NAME`** from prefs:
-- If `clickup_board_name` is set in prefs.json → use it
-- Otherwise → `"[USER_NAME_PREF]'s Task Board — Made from Pickle"` (e.g. `"Aditya's Task Board — Made from Pickle"`)
-- If no user_name → `"My Task Board — Made from Pickle"`
+2. From the hierarchy, identify **private spaces** — spaces that meet ANY of these:
+   - Only member is `MY_USER_ID`
+   - Space is marked private / restricted (`privacy: "private"` or similar flag)
+   - Space name matches "Private", "Personal", or `MY_NAME` (case-insensitive)
+   - Space has `members.length === 1` and that member is `MY_USER_ID`
 
-3. Search personal spaces first for a list matching any of:
-   - `BOARD_NAME` (exact), `"My Task Board"`, `"[MY_NAME]'s Task Board"`, `"Task Board"`, `"Daily Inbox"`, `"[MY_NAME] Task Board"`, `"Pickle"`
-4. If found → use that list, store as `TASK_BOARD_ID`.
-5. If NOT found in personal spaces → also check shared/team spaces (user may have created the list there intentionally).
-6. If still NOT found anywhere → create a new list called `BOARD_NAME`:
-   - **Always create inside a personal/private space** — pick the personal space identified in step 2.
-   - If no personal space exists, create a new space called `"Personal"` first (private, members: only `MY_USER_ID`), then create the list inside it.
+3. **Within private spaces only**, search for a list matching any of:
+   - `"Task Board - By Pickle"` (exact — primary match)
+   - `"Task Board"`, `"My Task Board"`, `"Daily Inbox"`, `"Pickle"`, `"[MY_NAME]'s Task Board"`
+
+4. If found in a private space → use that list, store as `TASK_BOARD_ID`. Done.
+
+5. If found BUT it's in a shared/team space → **do NOT use it**. Treat as not found and continue to step 6. Log: `⚠ Found "Task Board - By Pickle" in a shared space — ignoring (must be private).`
+
+6. If NOT found in any private space → create the list:
+   - **Step 6a:** Pick the first identified private space from step 2.
+   - **Step 6b:** If NO private space exists → create one now: call `clickup_create_space` with name `"Personal"`, `privacy: "private"`, members: `[MY_USER_ID]` only.
+   - **Step 6c:** Call `clickup_create_list` inside that private space with name `"Task Board - By Pickle"`.
    - Store the new list ID as `TASK_BOARD_ID`.
 
 Because you are set as the assignee on every task, **these tasks automatically appear in your ClickUp "My Tasks" view and Home widget** — you don't need to open the list to see them.
 
-Print: `📋 Task board ready: [list name] (ID: $TASK_BOARD_ID) — personal space ✓`
+Print: `📋 Task board ready: Task Board - By Pickle (ID: $TASK_BOARD_ID) — private space ✓`
 
 ---
 
@@ -755,7 +762,7 @@ After ALL tasks are created, set one ClickUp reminder for `MY_USER_ID` so it sur
 ```
 Call clickup_create_reminder:
   assignee:   MY_USER_ID
-  title:      "🥒 Pickle inbox ready — [N] tasks added to [BOARD_NAME]"
+  title:      "🥒 Pickle inbox ready — [N] tasks added to Task Board - By Pickle"
   date:       Date.now() + 30000   (30 seconds from now, in ms)
   notify_url: https://app.clickup.com/[WORKSPACE_ID]/board/[TASK_BOARD_ID]
 ```
