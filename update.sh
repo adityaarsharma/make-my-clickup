@@ -11,6 +11,7 @@ set -e
 PICKLE_MCP_DIR="$HOME/.claude/pickle-mcp"
 SKILLS_DIR="$HOME/.claude/skills"
 REPO_URL="https://github.com/adityaarsharma/pickle.git"
+VERSION_FILE="$PICKLE_MCP_DIR/.pickle_version"
 
 # ── Detect what's installed ─────────────────────────────────────
 HAS_CLICKUP_SKILL=0
@@ -64,6 +65,10 @@ fi
 echo "    · ~5s   copying updated skill files"
 echo "    · ~5s   final safety checks"
 echo ""
+# ── Read installed version ───────────────────────────────────────
+INSTALLED_VER="unknown"
+[ -f "$VERSION_FILE" ] && INSTALLED_VER=$(cat "$VERSION_FILE" 2>/dev/null || echo "unknown")
+
 echo "While we wait, a few things worth knowing about Pickle:"
 echo ""
 echo "   🥒 Pickle scans every corner — channels, DMs, group DMs,"
@@ -90,13 +95,35 @@ echo ""
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
-echo "⏳ [1/4] Cloning latest from github.com/adityaarsharma/pickle ..."
-if ! git clone --depth 1 --quiet "$REPO_URL" "$TMPDIR" 2>/dev/null; then
-  echo ""
-  echo "❌ Could not reach GitHub. Check your internet, then retry."
-  exit 1
+echo "⏳ [1/4] Checking latest release from github.com/adityaarsharma/pickle ..."
+
+# Try to resolve the latest release tag first (version-pinned update)
+LATEST_TAG=""
+LATEST_TAG=$(git ls-remote --tags --sort="-v:refname" "$REPO_URL" 2>/dev/null \
+  | grep -oE 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' \
+  | head -1 \
+  | sed 's|refs/tags/||' || echo "")
+
+if [ -n "$LATEST_TAG" ]; then
+  echo "   → Latest release: $LATEST_TAG (you have: $INSTALLED_VER)"
+  CLONE_REF="$LATEST_TAG"
+else
+  echo "   → No release tags found — using latest main branch"
+  CLONE_REF="main"
+  LATEST_TAG="main"
 fi
-echo "   ✓ Fetched."
+
+if ! git clone --depth 1 --branch "$CLONE_REF" --quiet "$REPO_URL" "$TMPDIR" 2>/dev/null; then
+  # Fallback to main if tag clone fails (e.g. tag doesn't exist as a branch ref)
+  echo "   ⚠ Tag clone failed — falling back to main branch"
+  LATEST_TAG="main"
+  if ! git clone --depth 1 --quiet "$REPO_URL" "$TMPDIR" 2>/dev/null; then
+    echo ""
+    echo "❌ Could not reach GitHub. Check your internet, then retry."
+    exit 1
+  fi
+fi
+echo "   ✓ Fetched $LATEST_TAG."
 
 # ── Update ClickUp MCP server (if installed) ─────────────────────
 if [ "$HAS_CLICKUP_MCP" -eq 1 ]; then
@@ -135,6 +162,9 @@ if [ -f "$TMPDIR/pickle-mcp/update.sh" ]; then
   chmod +x "$PICKLE_MCP_DIR/update.sh"
 fi
 
+# ── Write version stamp ─────────────────────────────────────────
+echo "$LATEST_TAG" > "$VERSION_FILE"
+
 # ── Final sanity check ──────────────────────────────────────────
 echo ""
 echo "⏳ [4/4] Verifying install ..."
@@ -149,6 +179,11 @@ echo "   ✓ All files in place."
 echo ""
 echo "════════════════════════════════════════════════════"
 echo "  ✅  Pickle updated successfully"
+if [ "$INSTALLED_VER" != "unknown" ] && [ "$INSTALLED_VER" != "$LATEST_TAG" ]; then
+  echo "  $INSTALLED_VER → $LATEST_TAG"
+else
+  echo "  Version: $LATEST_TAG"
+fi
 echo "════════════════════════════════════════════════════"
 echo ""
 echo "One last step to load the changes:"

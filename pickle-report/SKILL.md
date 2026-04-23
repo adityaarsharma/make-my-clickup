@@ -249,7 +249,7 @@ For each task a member worked on:
 Every time entry should have a description. Flag count:
 `EMPTY_ENTRY_FLAGS = ENTRIES_WITHOUT_DESC[user_id].length`
 
-If any entries empty → note: "@[name] — X time entries have no description. Please add what was done for each session."
+If any entries empty → note: "@[username] — X time entries have no description. Please add what was done for each session."
 
 **Overdue tasks:**
 Any task where `due_date_ms < Date.now()` AND status not complete → flag with days overdue.
@@ -343,11 +343,16 @@ Patterns get stronger language in the report + direct flag to Aditya.
 
 **CRITICAL FORMATTING RULE:** Do NOT truncate or shorten blocks. Every flag must cite the exact task name, task link, exact hours tracked, days stale, and specific evidence. Vague summaries are rejected. Write every block as if Aditya will read it alongside the task card — it must be specific enough to act on immediately without opening ClickUp.
 
+**@mention rule — CRITICAL for notifications to work:**
+Use the member's `.username` field (e.g. `alex_johnson`) — NOT their display name (e.g. `Alex Johnson`). Only the username field triggers a real ClickUp notification. Pull it from `ALL_MEMBERS[user_id].username`. Format: `@username` in the message content.
+
+**Task link rule:** Every task cited in the report MUST include its full ClickUp URL (`https://app.clickup.com/t/[task_id]`). If task ID is unknown for any entry, omit the link rather than guessing.
+
 **Per-person block format (canonical — do not deviate):**
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-@[Name] [STATUS_EMOJI] [Status label] — [one-line summary]
+@[username] [STATUS_EMOJI] [Status label] — [one-line summary]
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📋 Said [date of most recent standup]:
@@ -399,7 +404,7 @@ Truly Done check:
 Score: [X%] — [🟢 On track / 🟡 Needs attention / 🟠 Underperforming / 🔴 Critical]
 Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
 
-💬 Action items for @[Name]:
+💬 Action items for @[username]:
 1. [Specific ask with task link — what to do, on which card, by when]
 2. [Specific ask]
 3. [Specific ask if needed]
@@ -466,6 +471,28 @@ Call `clickup_send_chat_message`:
 
 On success: `✅ Posted to #[CHANNEL_FULL_NAME]`
 On failure: print report to terminal, note error.
+
+---
+
+## STEP 11.5 — SEND SLACK NOTIFICATION
+
+After `clickup_send_chat_message` succeeds, fire a Slack reminder via `slack_reminder_add` (from `pickle-slack-mcp`). This gives Aditya a push notification confirming the report posted.
+
+```
+Call slack_auth_test → get MY_SLACK_USER_ID (skip if already known)
+
+Call slack_reminder_add:
+  text:    "🥒 Pickle Report posted to #[CHANNEL_FULL_NAME]\n[WINDOW_LABEL] · [N] members · [N] flags raised\nReview: https://app.clickup.com/[WORKSPACE_ID]/chat/[CHANNEL_ID]"
+  time:    NOW_UNIX + 30   (fires in 30 seconds as a Slack push notification)
+  user_id: MY_SLACK_USER_ID
+```
+
+If `pickle-slack-mcp` is not connected → skip silently. Print to terminal only:
+```
+💡 Slack MCP not connected — skipping Slack notification. Report is posted to ClickUp above.
+```
+
+Do NOT post a self-DM as fallback. The terminal output from Step 13 is sufficient if Slack isn't available.
 
 ---
 
