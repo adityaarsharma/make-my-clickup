@@ -763,7 +763,7 @@ After ALL tasks are created, set one ClickUp reminder for `MY_USER_ID` so it sur
 Call clickup_create_reminder:
   assignee:   MY_USER_ID
   title:      "🥒 Pickle inbox ready — [N] tasks added to Task Board - By Pickle"
-  date:       Date.now() + 30000   (30 seconds from now, in ms)
+  date:       Date.now() + 5000   (30 seconds from now, in ms)
   notify_url: https://app.clickup.com/[WORKSPACE_ID]/board/[TASK_BOARD_ID]
 ```
 
@@ -832,12 +832,12 @@ Send TWO notifications — one in each ecosystem so the user gets a real inbox p
 
 **1. Slack reminder** (via `pickle-slack-mcp` → `slack_reminder_add`):
 - `text`: `🥒 Pickle ClickUp scan done · [TIME_LABEL] · [N] tasks added · [N] follow-ups · Board: https://app.clickup.com/t/list/[TASK_BOARD_ID]`
-- `time`: Unix timestamp = `Math.floor(Date.now() / 1000) + 30` (fires in 30 seconds — shows immediately in Slack Reminders inbox)
+- `time`: Unix timestamp = `Math.floor(Date.now() / 1000) + 5` (fires in 30 seconds — shows immediately in Slack Reminders inbox)
 
 **2. ClickUp reminder** (via `clickup_create_reminder`):
 - `name`: `🥒 Pickle ClickUp scan done · [N] tasks added to your board · [TIME_LABEL]`
 - `assignee`: `MY_USER_ID`
-- `due_date`: `Date.now() + 30000` (30 seconds from now)
+- `due_date`: `Date.now() + 5000` (30 seconds from now)
 - `team_id`: `WORKSPACE_ID`
 
 > **Ecosystem note:** The Slack reminder call carries no ClickUp data — only a completion ping. This cross-ecosystem call is explicitly allowed for notifications only.

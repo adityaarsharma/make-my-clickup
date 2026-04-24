@@ -489,7 +489,7 @@ After `clickup_send_chat_message` succeeds, set a ClickUp reminder for `MY_USER_
 Call clickup_create_reminder:
   assignee:   MY_USER_ID
   title:      "🥒 Pickle Report posted — #[CHANNEL_FULL_NAME] · [WINDOW_LABEL] · [N] members · [N] flags"
-  date:       Date.now() + 30000   (30 seconds from now, in ms)
+  date:       Date.now() + 5000   (30 seconds from now, in ms)
   notify_url: https://app.clickup.com/[WORKSPACE_ID]/chat/[CHANNEL_ID]
 ```
 
@@ -601,7 +601,7 @@ Send a ClickUp reminder so the manager is pinged in their ClickUp inbox:
 **ClickUp reminder** (via `clickup_create_reminder`):
 - `name`: `🥒 Pickle Report ready · #[CHANNEL_NAME] · [WINDOW_LABEL] · [N] members reviewed`
 - `assignee`: `MY_USER_ID`
-- `due_date`: `Date.now() + 30000`
+- `due_date`: `Date.now() + 5000`
 - `team_id`: `WORKSPACE_ID`
 
 ---

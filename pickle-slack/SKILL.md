@@ -729,7 +729,7 @@ If zero items found:
 
 Call `slack_reminder_add` (via `pickle-slack-mcp`) — this appears in your Slack Reminders inbox as a push notification, not a DM:
 - `text`: `🥒 Pickle Slack scan done · [TIME_LABEL] · [N] action items · [N] follow-ups`
-- `time`: `Math.floor(Date.now() / 1000) + 30` (Unix seconds — fires in 30s, shows immediately in inbox)
+- `time`: `Math.floor(Date.now() / 1000) + 5` (Unix seconds — fires in 30s, shows immediately in inbox)
 
 If zero items: text = `🥒 Pickle Slack · All clear in [TIME_LABEL] — nothing needs your attention`
 
