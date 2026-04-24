@@ -184,6 +184,45 @@ Print: `📋 Task board: Task Board - By Pickle (ID: $TASK_BOARD_ID)`
 
 ---
 
+## STEP 2.5 — BOARD CLEANUP (runs every time, before scan)
+
+**Goal:** Keep the board clean so it shows only active, relevant work — not a graveyard of old Pickle tasks.
+
+### A — Remove Pickle notification tasks
+
+Call `clickup_get_list_tasks` on `TASK_BOARD_ID`. For tasks where:
+- name contains `🔔` AND `due_date < now`
+
+→ Call `clickup_delete_task` on each. These are the 1-minute deadline notification tasks from the previous run.
+
+### B — Auto-close deeply stale tasks
+
+For tasks where **all three** are true:
+- `status = "to do"` (never started)
+- `due_date < now − 3 days` (overdue by 3+ days)
+- `date_updated < now − 7 days` (no activity in 7+ days)
+
+→ Call `clickup_update_task` with `status: "complete"` on each.
+
+**Never auto-close:** tasks with `status: "in progress"` or updated in the last 24h.
+
+### C — Roll yesterday's in-progress tasks forward
+
+For tasks where:
+- `status = "in progress"` AND `due_date < today midnight`
+
+→ Bump `due_date` to today (do NOT change status — they're still active).
+
+Print:
+```
+🧹 Board cleanup:
+  · [N] notification tasks removed
+  · [N] stale tasks auto-closed (overdue 3d + no update 7d)
+  · [N] in-progress tasks rolled to today
+```
+
+---
+
 ## STEP 3 — DYNAMIC SOURCE DISCOVERY
 
 **Never use hardcoded IDs.** Discover every surface where ClickUp carries a conversation:
@@ -684,10 +723,23 @@ SOURCE_URL = [if chat message]  https://app.clickup.com/[WORKSPACE_ID]/chat/r/[c
 ```
 This is the 1-click jump back to the original message. **Never omit the source link.**
 
+**Status rules (REQUIRED — never leave blank):**
+
+| Source type | Status |
+|-------------|--------|
+| `assigned_comment` | `"in progress"` — you're already named on this work |
+| Any item with `priority=urgent` and `due_date=today` | `"in progress"` — surface it immediately |
+| All other Mode A items | `"to do"` — queued, not yet started |
+
+**Naming rule:**
+- Regular inbox item → `[action verb] [context] — [person/channel]` (max 80 chars)
+- Assigned comment → name as-is from the task title + `(assigned comment)`
+
 Call `clickup_create_task`:
 ```
 list_id:   TASK_BOARD_ID
 name:      [action verb] + [description] (max 80 chars)
+status:    "in progress" OR "to do" (see status rules above)
 priority:  1=urgent / 2=high / 3=normal / 4=low
 due_date:  URGENT=today · HIGH=tomorrow · NORMAL=end of week · LOW=next week
 assignees: [MY_USER_ID]
@@ -734,7 +786,8 @@ After creating, write the `message_id → task_id` entry into `state.json`.
 Call `clickup_create_task`:
 ```
 list_id:   TASK_BOARD_ID
-name:      [emoji] Follow up → [their name]: [what was asked] (max 80)
+name:      🔁 [their name] — [what was asked] (max 80)   ← always prefix with 🔁 so follow-ups are visually distinct
+status:    "to do"   ← waiting on someone else; not "in progress" (that's MY active work)
 priority:  [rules above]
 due_date:  [rules above]
 assignees: [MY_USER_ID]

@@ -4,7 +4,7 @@
 >
 > Every morning, 200+ messages across ClickUp and Slack. Half are noise. A few are decisions waiting on you. Pickle reads everything, keeps the few that matter, and drops them in your personal task board — ranked by what YOU actually do.
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever. **v2.5.0**
+Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever. **v2.7.0**
 
 ---
 
