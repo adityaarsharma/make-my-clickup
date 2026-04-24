@@ -598,6 +598,10 @@ Then: FLAGS RAISED, PATTERNS, GAPS summary, and path to state.json.
 
 **ClickUp deadline task hack** (fires a due-date notification in ClickUp inbox — works on all plans):
 
+Resolve `TASK_BOARD_ID` first (if not already known):
+- Call `clickup_get_workspace_hierarchy` → scan ALL lists across ALL spaces for name `"Task Board - By Pickle"` (exact)
+- If found → use it. If multiple → use the one with the most tasks. **Never create a new one.**
+
 Step A — Clean up previous notification tasks:
 - Call `clickup_get_list_tasks` on `TASK_BOARD_ID`
 - Delete any task whose name contains `🔔` via `clickup_delete_task`
