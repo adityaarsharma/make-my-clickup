@@ -4,7 +4,7 @@
 >
 > Every morning, 200+ messages across ClickUp and Slack. Half are noise. A few are decisions waiting on you. Pickle reads everything, keeps the few that matter, and drops them in your personal task board — ranked by what YOU actually do.
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever.
+Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever. **v2.5.0**
 
 ---
 
@@ -41,6 +41,9 @@ In a private DM or group DM that includes you, every unanswered question is your
 ### 🌐 Reads intent, not just keywords
 Teams write in whatever language is natural — and Pickle reads the *meaning*, not the exact phrase. "Can you confirm?", "please approve", and any local-language equivalent all register the same way.
 
+### 🔔 Notifies you the moment a scan finishes
+Every Pickle run fires an instant inbox notification when done — a ClickUp deadline ping or Slack reminder — so you know the report is ready without watching Claude Code. No Business plan required.
+
 ### 🚫 Never auto-sends
 Every follow-up message is drafted, shown to you, and only sent after you say so. If you've already nudged someone twice, Pickle refuses to send a third — it suggests you talk to them directly.
 
@@ -59,9 +62,9 @@ For team leads and managers.
 
 | Command | What it does |
 |---------|-------------|
-| `/pickle-clickup [window]` | ClickUp inbox — what needs your action |
-| `/pickle-slack [window]` | Slack inbox — same, from Slack |
-| `/pickle-report [channel] [window]` | Team performance pulse — commitment vs execution |
+| `/pickle-clickup [window]` | ClickUp inbox — what needs your action · fires ClickUp + Slack notification when done |
+| `/pickle-slack [window]` | Slack inbox — same, from Slack · fires Slack notification when done |
+| `/pickle-report [channel] [window]` | Team performance pulse — commitment vs execution · fires ClickUp notification when done |
 | `/pickle-update` | Update Pickle to the latest version |
 
 ### 👤 Pickle Team Member
@@ -69,8 +72,8 @@ For individual contributors.
 
 | Command | What it does |
 |---------|-------------|
-| `/pickle-clickup [window]` | ClickUp inbox — what needs your action |
-| `/pickle-slack [window]` | Slack inbox — if your team uses Slack |
+| `/pickle-clickup [window]` | ClickUp inbox — what needs your action · fires ClickUp notification when done |
+| `/pickle-slack [window]` | Slack inbox — if your team uses Slack · fires Slack notification when done |
 | `/pickle-update` | Update Pickle to the latest version |
 
 **The only difference:** Managers get `/pickle-report`. Team members don't.
