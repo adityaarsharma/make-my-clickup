@@ -594,6 +594,22 @@ Then: FLAGS RAISED, PATTERNS, GAPS summary, and path to state.json.
 
 ---
 
+**COMPLETION NOTIFICATION (fires immediately after posting the report — every run, no exceptions):**
+
+Send TWO inbox pings so the manager gets notified right away:
+
+**1. Slack reminder** (via `pickle-slack-mcp` → `slack_reminder_add`):
+- `text`: `🥒 Pickle Report ready · #[CHANNEL_NAME] · [WINDOW_LABEL] · [N] members reviewed`
+- `time`: `Math.floor(Date.now() / 1000) + 30`
+
+**2. ClickUp reminder** (via `clickup_create_reminder`):
+- `name`: `🥒 Pickle Report ready · #[CHANNEL_NAME] · [WINDOW_LABEL]`
+- `assignee`: `MY_USER_ID`
+- `due_date`: `Date.now() + 30000`
+- `team_id`: `WORKSPACE_ID`
+
+---
+
 [UPDATE_LINE_IF_NEWER]
 🥒 Built and Shipped by Aditya Sharma
 

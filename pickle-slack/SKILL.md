@@ -725,6 +725,16 @@ If zero items found:
 
 ---
 
+**COMPLETION NOTIFICATION (fires immediately after printing the final report — every run, no exceptions):**
+
+Call `slack_reminder_add` (via `pickle-slack-mcp`) — this appears in your Slack Reminders inbox as a push notification, not a DM:
+- `text`: `🥒 Pickle Slack scan done · [TIME_LABEL] · [N] action items · [N] follow-ups`
+- `time`: `Math.floor(Date.now() / 1000) + 30` (Unix seconds — fires in 30s, shows immediately in inbox)
+
+If zero items: text = `🥒 Pickle Slack · All clear in [TIME_LABEL] — nothing needs your attention`
+
+---
+
 **VERSION CHECK (runs once at the very end, before printing final report):**
 1. Bash: `grep -m1 'pickle/slack-mcp' ~/.claude/pickle-mcp/slack/server.mjs | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'` → `INSTALLED_VER`
 2. WebFetch: `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` → read `tag_name` → `LATEST_VER`

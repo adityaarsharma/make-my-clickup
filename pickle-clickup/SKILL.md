@@ -812,7 +812,7 @@ If `clickup_create_reminder` is unavailable in the MCP → skip silently. The te
   Slack counterpart: /pickle-slack [time]
   Docs: https://github.com/adityaarsharma/pickle
 ────────────────────────────────────────────────────
-  🔄 MCP update available? Run: bash ~/.claude/pickle-mcp/update.sh
+  [UPDATE_LINE_IF_NEWER]
   🥒 Built and Shipped by Aditya Sharma
 ════════════════════════════════════════════════════
 ```
@@ -822,5 +822,30 @@ If zero items found:
 ✅ All clear — no ClickUp action items or pending follow-ups in [TIME_LABEL].
    Channels scanned: [N] · Messages reviewed: [N]
 
+  [UPDATE_LINE_IF_NEWER]
   🥒 Built and Shipped by Aditya Sharma
 ```
+
+**COMPLETION NOTIFICATION (fires immediately after printing the final report — every run, no exceptions):**
+
+Send TWO notifications — one in each ecosystem so the user gets a real inbox ping:
+
+**1. Slack reminder** (via `pickle-slack-mcp` → `slack_reminder_add`):
+- `text`: `🥒 Pickle ClickUp scan done · [TIME_LABEL] · [N] tasks added · [N] follow-ups · Board: https://app.clickup.com/t/list/[TASK_BOARD_ID]`
+- `time`: Unix timestamp = `Math.floor(Date.now() / 1000) + 30` (fires in 30 seconds — shows immediately in Slack Reminders inbox)
+
+**2. ClickUp reminder** (via `clickup_create_reminder`):
+- `name`: `🥒 Pickle ClickUp scan done · [N] tasks added to your board · [TIME_LABEL]`
+- `assignee`: `MY_USER_ID`
+- `due_date`: `Date.now() + 30000` (30 seconds from now)
+- `team_id`: `WORKSPACE_ID`
+
+> **Ecosystem note:** The Slack reminder call carries no ClickUp data — only a completion ping. This cross-ecosystem call is explicitly allowed for notifications only.
+
+---
+
+**VERSION CHECK (runs once at the very end, before printing final report):**
+1. Bash: `grep -m1 'pickle/clickup-mcp' ~/.claude/pickle-mcp/clickup/server.mjs | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'` → `INSTALLED_VER`
+2. WebFetch: `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` → read `tag_name` → `LATEST_VER`
+3. If `LATEST_VER ≠ INSTALLED_VER` → replace `[UPDATE_LINE_IF_NEWER]` with: `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`
+4. If same OR fetch fails → remove `[UPDATE_LINE_IF_NEWER]` line entirely (print nothing)
