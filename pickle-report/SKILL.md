@@ -591,3 +591,8 @@ Then: FLAGS RAISED, PATTERNS, GAPS summary, and path to state.json.
 - No pattern history → note "Baseline run"
 - Every score and flag is independently meaningful
 - State created fresh for this channel
+
+---
+
+🔄 Run: bash ~/.claude/pickle-mcp/update.sh to get latest fixes
+🥒 Built and Shipped by Aditya Sharma

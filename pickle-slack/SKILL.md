@@ -709,6 +709,7 @@ user_id: MY_USER_ID
   ClickUp counterpart: /pickle-clickup [time]
   Docs: https://github.com/adityaarsharma/pickle
 ────────────────────────────────────────────────────
+  🔄 Run: bash ~/.claude/pickle-mcp/update.sh to get latest fixes
   🥒 Built and Shipped by Aditya Sharma
 ════════════════════════════════════════════════════
 ```
@@ -718,6 +719,7 @@ If zero items found:
 ✅ All clear — no Slack action items or pending follow-ups in [TIME_LABEL].
    Conversations scanned: [N] · Messages reviewed: [N]
 
+  🔄 Run: bash ~/.claude/pickle-mcp/update.sh to get latest fixes
   🥒 Built and Shipped by Aditya Sharma
 ```
 
