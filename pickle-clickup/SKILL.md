@@ -186,38 +186,28 @@ Print: `📋 Task board: Task Board - By Pickle (ID: $TASK_BOARD_ID)`
 
 ## STEP 2.5 — BOARD CLEANUP (runs every time, before scan)
 
-**Goal:** Keep the board clean so it shows only active, relevant work — not a graveyard of old Pickle tasks.
+**Goal:** Remove only the temporary Pickle notification tasks from the previous run and roll forward any in-progress tasks whose due date is now yesterday.
+
+**HARD RULE: Never close, delete, or archive any task the user created or marked "to do" — those stay until the user marks them complete themselves. Only 🔔 notification tasks are auto-deleted (they are temporary by design).**
 
 ### A — Remove Pickle notification tasks
 
 Call `clickup_get_list_tasks` on `TASK_BOARD_ID`. For tasks where:
 - name contains `🔔` AND `due_date < now`
 
-→ Call `clickup_delete_task` on each. These are the 1-minute deadline notification tasks from the previous run.
+→ Call `clickup_delete_task` on each. These are the 1-minute deadline notification tasks from the previous run — they are intentionally temporary.
 
-### B — Auto-close deeply stale tasks
-
-For tasks where **all three** are true:
-- `status = "to do"` (never started)
-- `due_date < now − 3 days` (overdue by 3+ days)
-- `date_updated < now − 7 days` (no activity in 7+ days)
-
-→ Call `clickup_update_task` with `status: "complete"` on each.
-
-**Never auto-close:** tasks with `status: "in progress"` or updated in the last 24h.
-
-### C — Roll yesterday's in-progress tasks forward
+### B — Roll yesterday's in-progress tasks forward
 
 For tasks where:
 - `status = "in progress"` AND `due_date < today midnight`
 
-→ Bump `due_date` to today (do NOT change status — they're still active).
+→ Bump `due_date` to today only (do NOT change status — they're still active work).
 
 Print:
 ```
 🧹 Board cleanup:
   · [N] notification tasks removed
-  · [N] stale tasks auto-closed (overdue 3d + no update 7d)
   · [N] in-progress tasks rolled to today
 ```
 
