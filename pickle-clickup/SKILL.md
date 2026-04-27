@@ -725,7 +725,7 @@ Final priority tier = base urgency tier → bumped one level UP if (importance_s
 
 ---
 
-## STEP 7 — CONTEXT MEMORY + DEDUPE
+## STEP 7 — CONTEXT MEMORY + DEDUPE + BUMP
 
 ### Context memory
 
@@ -742,13 +742,38 @@ Read `~/.claude/skills/pickle-clickup/state.json` (create if missing):
 }
 ```
 
-**Skip any message whose `message_id` is in `actioned_messages` UNLESS** the message got new replies after `actioned_at` (treat as new event).
-
 **Stored:** message IDs + task IDs + timestamps only. **No message content. No personal info.** Delete the file to reset.
 
-### Local dedupe
+### Decision tree — create / bump / skip
 
-Call `clickup_filter_tasks` on `TASK_BOARD_ID`. Skip creating if same task name exists and was created today, or description already contains the same `message_id` link.
+For every qualifying item from Step 6, check in this order:
+
+**1. Is `message_id` in `actioned_messages`?**
+- **Yes, task status = `complete`** → treat as fresh (they closed it, it came back). Create a new task.
+- **Yes, task status ≠ `complete`** AND no new replies since `actioned_at` → **skip** (already on board, nothing new).
+- **Yes, task status ≠ `complete`** AND new replies since `actioned_at` → **bump** the existing task (see below).
+- **No** → check step 2.
+
+**2. Does a task already exist on the board with a matching `message_id` link in its description?**
+(Call `clickup_get_list_tasks` on `TASK_BOARD_ID`, scan descriptions for the source URL.)
+- **Found, status = `complete`** → create fresh.
+- **Found, status ≠ `complete`** → **bump** the existing task (see below).
+- **Not found** → **create new** task (Step 8).
+
+### What "bump" means
+
+Call `clickup_update_task` on the existing `task_id`:
+- **Priority escalated?** (new replies added urgency) → raise priority by 1 level
+- **Due date passed?** → reset due date to today
+- Append to description:
+  ```
+  ---
+  🔄 UPDATED [date] — [N] new replies since last scan
+  Latest: "[newest reply excerpt, max 100 chars]"
+  ```
+- **Do NOT create a duplicate task.**
+
+Print: `↑ Bumped: [task name] — [reason]`
 
 ---
 
