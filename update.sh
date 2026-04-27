@@ -165,14 +165,32 @@ echo "$LATEST_TAG" > "$VERSION_FILE"
 # ── Remove deprecated / post-setup tools ───────────────────────
 # pickle-setup: onboarding wizard, self-deletes after setup. If still
 # present (interrupted setup or old install), remove it now.
-# pickle-me: retired skill, no longer part of Pickle.
+# pickle-me / pickle-report: retired skills.
 CLEANUP_DONE=0
-if [ -d "$SKILLS_DIR/pickle-setup" ]; then
-  rm -rf "$SKILLS_DIR/pickle-setup"
-  CLEANUP_DONE=1
+for deprecated in pickle-setup pickle-me pickle-report; do
+  if [ -d "$SKILLS_DIR/$deprecated" ]; then
+    rm -rf "$SKILLS_DIR/$deprecated"
+    CLEANUP_DONE=1
+    echo "   ✓ Removed deprecated: $deprecated"
+  fi
+done
+
+# ── Ecosystem cleanup — remove skills the user didn't pick ──────
+# Read prefs.json to find what ecosystem the user chose at setup.
+# If they chose clickup-only → remove pickle-slack (and vice versa).
+PREFS_FILE="$HOME/.claude/pickle/prefs.json"
+ECO_CHOICE=""
+if [ -f "$PREFS_FILE" ]; then
+  ECO_CHOICE=$(python3 -c "import json,sys; d=json.load(open('$PREFS_FILE')); print(d.get('ecosystem',''))" 2>/dev/null || echo "")
 fi
-if [ -d "$SKILLS_DIR/pickle-me" ]; then
-  rm -rf "$SKILLS_DIR/pickle-me"
+
+if [ "$ECO_CHOICE" = "clickup" ] && [ -d "$SKILLS_DIR/pickle-slack" ]; then
+  rm -rf "$SKILLS_DIR/pickle-slack"
+  echo "   ✓ Removed pickle-slack (you're ClickUp-only)"
+  CLEANUP_DONE=1
+elif [ "$ECO_CHOICE" = "slack" ] && [ -d "$SKILLS_DIR/pickle-clickup" ]; then
+  rm -rf "$SKILLS_DIR/pickle-clickup"
+  echo "   ✓ Removed pickle-clickup (you're Slack-only)"
   CLEANUP_DONE=1
 fi
 
