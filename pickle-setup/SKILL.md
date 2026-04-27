@@ -16,7 +16,8 @@ You are the **pickle-setup** agent. Walk the user through installing Pickle like
 **Rules:**
 - Ask ONE thing at a time. Wait for the answer.
 - Never paste a huge wall of text.
-- Always show an ASCII box/divider between sections.
+- **Never use code blocks for conversational messages.** All `Print:` instructions below show the CONTENT to say — output it as regular chat text. Only use ` ``` ` blocks for actual bash commands or JSON config the user needs to copy.
+- Keep messages warm, decorated with emoji, fun. This is an onboarding wizard — make people enjoy it.
 - Confirm every write before doing it ("About to add X to your config — proceed?")
 - Never print a token back at the user after they paste it.
 - **Before every wait of >5 seconds, give a tentative ETA AND a fun/useful fact** so setup never feels frozen. Pattern: `⏱ ~X sec — [fun fact or reassurance]`.
@@ -42,7 +43,7 @@ Else if $ARGUMENTS contains "manager":
 
 Else:
   Print:
-  ────────────────────────────────────────────────────
+  ---
   ❌ Missing version argument.
 
   Use the correct install command from the README:
@@ -51,7 +52,7 @@ Else:
     Team:     /pickle-setup team
 
   Contact the person who shared this with you if unsure.
-  ────────────────────────────────────────────────────
+  ---
   STOP — do not continue.
 ```
 
@@ -102,9 +103,9 @@ Both versions continue to STEP 0.5.
 Print:
 
 ```
-────────────────────────────────────────────────────
+---
   One more thing — what's your role?
-────────────────────────────────────────────────────
+---
 
 This isn't a filter — it's a PERSPECTIVE hint. A CEO cares
 about approvals and deals; a dev lead cares about blockers;
@@ -168,9 +169,9 @@ Store as `ROLE_CONTEXT`.
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   Which tools does your team use?
-────────────────────────────────────────────────────
+---
 
   [1] 🔵 ClickUp only
   [2] 💬 Slack only
@@ -231,9 +232,9 @@ Rules:
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   📦 Fetching the skills you need
-────────────────────────────────────────────────────
+---
 
 [For clickup:]
   • pickle-clickup   (the ClickUp inbox-scan skill)
@@ -286,9 +287,9 @@ After fetch, confirm:
 Two free paths — ask both team and manager:
 
 ```
-────────────────────────────────────────────────────
+---
   🔵 ClickUp — how do you want to connect? (both free)
-────────────────────────────────────────────────────
+---
 
   [1] Official Claude ClickUp connector — recommended
       → 2 clicks on claude.ai, no terminal needed
@@ -310,9 +311,9 @@ Store as `CLICKUP_AUTH` (`connector` or `pickle_mcp`).
 (Only if they picked Slack or Both.) Two free options — ask which:
 
 ```
-────────────────────────────────────────────────────
+---
   💬 Slack — how do you want to connect? (both free)
-────────────────────────────────────────────────────
+---
 
   [1] Official Claude Slack connector (2 clicks, OAuth)
   [2] Your own Slack app + user token (full isolation)
@@ -330,9 +331,9 @@ Store as `SLACK_AUTH` (`connector` or `token`). Both paths are free.
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   🔵 ClickUp via Claude Connector
-────────────────────────────────────────────────────
+---
 
 Do this in your browser:
   1. Open claude.ai
@@ -352,19 +353,17 @@ This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/serv
 **Step A — Get the ClickUp API token.** Print:
 
 ```
-────────────────────────────────────────────────────
+---
   🔵 ClickUp API Token — 30 seconds
-────────────────────────────────────────────────────
+---
 
   1. Open app.clickup.com in your browser
-  2. Click your avatar (bottom-left corner)
-  3. Click "Settings"
-  4. In the left sidebar, click "Apps"
-  5. On the Apps page, scroll to "API Token"
-  6. Click "Generate" (or "Regenerate" if one exists)
-  7. Copy the token — it starts with  pk_xxxxxxxxxxxxxxxx
+  2. Click your avatar (bottom-left corner) → Settings
+  3. Left sidebar → Integrations & ClickApps → ClickUp API
+  4. Click Generate (or copy if one already exists)
+  5. Copy the token — it starts with pk_...
 
-👉 Paste your pk_ token below. (I'll never show it back.)
+👉 Paste your pk_ token here. I'll never show it back.
 ```
 
 Store as `PK_TOKEN`. **Never echo back.**
@@ -378,8 +377,8 @@ Store as `PK_TOKEN`. **Never echo back.**
      no per-call cost, no surprise charges. Ever.
    ✓ Your token stays in ~/.claude.json on THIS machine.
      Never sent to Pickle, never uploaded anywhere.
-   ✓ You can revoke it anytime — avatar → Settings → Apps → Regenerate
-     → Generate a new one and the old one dies instantly.
+   ✓ You can revoke it anytime — Settings → Integrations & ClickApps
+     → ClickUp API → Generate a new one and the old one dies instantly.
    ✓ Pickle only READS your data by default. Any "send
      reminder" action always asks you first.
 
@@ -400,9 +399,9 @@ curl -s -H "Authorization: $PK_TOKEN" https://api.clickup.com/api/v2/team
 **Step C — Install MCP dependencies.** The Pickle MCP needs `@modelcontextprotocol/sdk` + `zod`. This is the longest wait in the whole setup — **make it fun**. Print BEFORE starting:
 
 ```
-────────────────────────────────────────────────────
+---
   📦 Installing Pickle's ClickUp MCP (≈ 30–60 sec)
-────────────────────────────────────────────────────
+---
 
 Grabbing two tiny npm packages. While we wait, fun facts:
 
@@ -452,9 +451,9 @@ Confirm: `✓ Pickle ClickUp MCP configured for workspace "[NAME]".`
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   💬 Slack via Claude Connector
-────────────────────────────────────────────────────
+---
 
 Do this in your browser:
   1. Open claude.ai
@@ -468,9 +467,9 @@ Tell me when done.
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   💬 Slack User OAuth Token — 2 minutes
-────────────────────────────────────────────────────
+---
 
   1. Open api.slack.com/apps
   2. Click "Create New App" → "From scratch"
@@ -570,9 +569,9 @@ Skills dropped into `~/.claude/skills/` only show up in the `/` autocomplete aft
 Ask the user directly:
 
 ```
-────────────────────────────────────────────────────
+---
   🔄 Quick check — one restart needed
-────────────────────────────────────────────────────
+---
 
 All files are written. Now Claude Code needs to pick them
 up. Do this now:
@@ -623,9 +622,9 @@ Don't ask for a second restart unless the first one genuinely failed. One restar
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   Quick preferences — you can change anything later
-────────────────────────────────────────────────────
+---
 ```
 
 Ask each question one at a time:
@@ -688,9 +687,9 @@ This is read by `pickle-clickup` and `pickle-slack` to personalise. Pure prefere
 
 Print:
 ```
-────────────────────────────────────────────────────
+---
   🚀 Let's do a test run
-────────────────────────────────────────────────────
+---
 
 I'll run Pickle on your last 24 hours. You'll see exactly
 what it finds before anything gets written. Ready?
@@ -782,9 +781,9 @@ Print a polished summary:
   ✓ Default window:      [24h / 7d / ...]
   ✓ Task destination:    [board/list name]
 
-────────────────────────────────────────────────────
+---
   Your commands
-────────────────────────────────────────────────────
+---
 
   [Only show commands for what was actually installed:]
 
@@ -806,9 +805,9 @@ Print a polished summary:
    To re-run setup later, paste in Claude Code:
    "Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup [manager|team]")
 
-────────────────────────────────────────────────────
+---
   A few things to remember
-────────────────────────────────────────────────────
+---
 
   🔒 Everything runs locally. No Pickle server. No telemetry.
   🔒 Slack + ClickUp data never mix.
@@ -817,7 +816,7 @@ Print a polished summary:
 
   To update Pickle later → just run /pickle-update
 
-────────────────────────────────────────────────────
+---
   🥒 Built and Shipped by Aditya Sharma
   github.com/adityaarsharma/pickle
 ════════════════════════════════════════════════════
