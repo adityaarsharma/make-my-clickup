@@ -2,16 +2,15 @@
 # ══════════════════════════════════════════════════════════════
 #  🥒  Pickle — Team Member Install
 #  Installs: pickle-clickup · pickle-slack · pickle-update
-#  Configures: ClickUp personal token MCP (for shared accounts)
+#  Token is configured by Claude after install — no prompts.
 #
-#  Usage: open Claude Code → press ⌃` → paste:
-#    curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
+#  Usage: paste in Claude Code chat:
+#    Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
 # ══════════════════════════════════════════════════════════════
 set -e
 
 SKILLS_DIR="$HOME/.claude/skills"
 PICKLE_MCP_DIR="$HOME/.claude/pickle-mcp"
-CLAUDE_JSON="$HOME/.claude.json"
 REPO_URL="https://github.com/adityaarsharma/pickle.git"
 
 echo ""
@@ -24,14 +23,12 @@ echo "   /pickle-clickup   — your ClickUp inbox"
 echo "   /pickle-slack     — your Slack inbox"
 echo "   /pickle-update    — one-command updater"
 echo ""
-echo "Takes about 2 minutes."
-echo ""
 
-# ── Clone latest ────────────────────────────────────────────────
+# ── Clone latest ─────────────────────────────────────────────
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
-echo "⏳ [1/4] Fetching latest from GitHub ..."
+echo "⏳ [1/3] Fetching latest from GitHub ..."
 
 LATEST_TAG=""
 LATEST_TAG=$(git ls-remote --tags --sort="-v:refname" "$REPO_URL" 2>/dev/null \
@@ -48,9 +45,9 @@ else
 fi
 echo "   ✓ Fetched $LATEST_TAG"
 
-# ── Install skills ───────────────────────────────────────────────
+# ── Install skills ────────────────────────────────────────────
 echo ""
-echo "⏳ [2/4] Installing skill files ..."
+echo "⏳ [2/3] Installing skill files ..."
 mkdir -p "$SKILLS_DIR"
 
 for skill in pickle-clickup pickle-slack pickle-update; do
@@ -62,9 +59,9 @@ for skill in pickle-clickup pickle-slack pickle-update; do
   fi
 done
 
-# ── Install ClickUp MCP server ───────────────────────────────────
+# ── Install ClickUp MCP server ────────────────────────────────
 echo ""
-echo "⏳ [3/4] Installing ClickUp MCP server ..."
+echo "⏳ [3/3] Installing ClickUp MCP server ..."
 if command -v node >/dev/null 2>&1; then
   mkdir -p "$PICKLE_MCP_DIR/clickup"
   if [ -f "$TMPDIR/pickle-mcp/clickup/server.mjs" ]; then
@@ -76,103 +73,28 @@ if command -v node >/dev/null 2>&1; then
   fi
   [ -f "$TMPDIR/update.sh" ] && cp "$TMPDIR/update.sh" "$PICKLE_MCP_DIR/update.sh" && chmod +x "$PICKLE_MCP_DIR/update.sh"
 else
-  echo "   ✗ Node.js not found."
-  echo "     Install Node.js LTS from nodejs.org, then re-run this script."
-  exit 1
+  echo "   ℹ Node.js not found — install Node.js LTS from nodejs.org and re-run"
 fi
 
-# ── Configure ClickUp API token ──────────────────────────────────
-echo ""
-echo "⏳ [4/4] Connecting your ClickUp account ..."
-echo ""
-echo "   Get your token from: app.clickup.com/settings/apps"
-echo "   It starts with pk_..."
-echo ""
-printf "   Paste your ClickUp API token: "
-read -r CLICKUP_TOKEN </dev/tty
-
-if [ -z "$CLICKUP_TOKEN" ]; then
-  echo ""
-  echo "   ⚠ No token entered — skipping ClickUp configuration."
-  echo "     Run this script again when you have your token."
-  SKIP_TOKEN=1
-else
-  # Fetch workspace ID from the API
-  echo "   Verifying token ..."
-  TEAM_RESPONSE=$(curl -s -H "Authorization: $CLICKUP_TOKEN" "https://api.clickup.com/api/v2/team" 2>/dev/null || echo "{}")
-  TEAM_ID=$(python3 -c "import sys,json; d=$TEAM_RESPONSE; teams=d.get('teams',[]); print(teams[0]['id'] if teams else '')" 2>/dev/null \
-    || echo "")
-
-  if [ -z "$TEAM_ID" ]; then
-    echo "   ✗ Could not verify token. Check that it's correct and try again."
-    echo "     Token starts with pk_ — get it from app.clickup.com/settings/apps"
-    exit 1
-  fi
-
-  TEAM_NAME=$(python3 -c "import sys,json; d=$TEAM_RESPONSE; teams=d.get('teams',[]); print(teams[0].get('name','') if teams else '')" 2>/dev/null || echo "")
-  echo "   ✓ Token valid — workspace: $TEAM_NAME ($TEAM_ID)"
-
-  # Write to ~/.claude.json
-  SERVER_PATH="$PICKLE_MCP_DIR/clickup/server.mjs"
-  python3 - <<PYEOF
-import json, os, sys
-
-path = os.path.expanduser("~/.claude.json")
-try:
-    with open(path, "r") as f:
-        config = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-    config = {}
-
-config.setdefault("mcpServers", {})["clickup"] = {
-    "command": "node",
-    "args": ["$SERVER_PATH"],
-    "env": {
-        "CLICKUP_API_KEY": "$CLICKUP_TOKEN",
-        "CLICKUP_TEAM_ID": "$TEAM_ID"
-    }
-}
-
-with open(path, "w") as f:
-    json.dump(config, f, indent=2)
-
-print("   ✓ ClickUp configured in ~/.claude.json")
-PYEOF
-  SKIP_TOKEN=0
-fi
-
-# ── Remove deprecated tools ──────────────────────────────────────
+# ── Remove deprecated tools ───────────────────────────────────
 for deprecated in pickle-setup pickle-me pickle-report; do
   [ -d "$SKILLS_DIR/$deprecated" ] && rm -rf "$SKILLS_DIR/$deprecated"
 done
 
-# ── Write version ────────────────────────────────────────────────
+# ── Write version ─────────────────────────────────────────────
 mkdir -p "$PICKLE_MCP_DIR"
 echo "$LATEST_TAG" > "$PICKLE_MCP_DIR/.pickle_version"
 
-# ── Done ─────────────────────────────────────────────────────────
+# ── Done ─────────────────────────────────────────────────────
 echo ""
 echo "════════════════════════════════════════════════════"
-echo "  ✅  Pickle installed — $LATEST_TAG"
+echo "  ✅  Pickle skills installed — $LATEST_TAG"
 echo "════════════════════════════════════════════════════"
 echo ""
-if [ "${SKIP_TOKEN:-0}" -eq 0 ]; then
-  echo "One last step:"
-  echo ""
-  echo "   Fully quit Claude Code (Cmd+Q — not just close the window)"
-  echo "   Reopen it"
-  echo "   Type: /pickle-clickup 24h"
-  echo ""
-  echo "That's it. You're live."
-else
-  echo "ClickUp token not configured yet."
-  echo "Get it from app.clickup.com/settings/apps and re-run this script."
-fi
+echo "One more step to connect ClickUp:"
 echo ""
-echo "Your commands:"
-echo "   /pickle-clickup    — scan your ClickUp inbox"
-echo "   /pickle-slack      — scan your Slack inbox"
-echo "   /pickle-update     — update Pickle"
+echo "  Get your API token from: app.clickup.com/settings/apps"
+echo "  It starts with pk_..."
 echo ""
-echo "Docs: https://github.com/adityaarsharma/pickle"
+echo "  Paste your token as your next message and setup will complete."
 echo ""

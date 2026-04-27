@@ -29,22 +29,63 @@ You operate in two modes simultaneously:
 
 ### Pre-flight: if no ClickUp tool is available
 
-If `clickup_get_workspace_hierarchy` (and all other `clickup_*` tools) are missing, don't silently fail. Print exactly this:
+If `clickup_get_workspace_hierarchy` (and all other `clickup_*` tools) are missing:
 
+**First, check if the MCP server is installed but token is missing:**
+
+Run: `test -f ~/.claude/pickle-mcp/clickup/server.mjs && echo "server_exists" || echo "server_missing"`
+
+**If `server_exists`** — the server is installed but not configured in `~/.claude.json` yet. This is the post-install token setup. Run this flow:
+
+1. Print:
 ```
-❌ ClickUp isn't connected in this session.
+Almost there — your ClickUp token needs to be added.
 
-Most likely cause:
+Go to: app.clickup.com/settings/apps
+Under "API Token" → click Generate → copy the pk_... token
+Paste it here and I'll complete the setup.
+```
 
-  A) Setup was never run → run /pickle-setup
-  B) Setup completed but Claude Code wasn't restarted → fully quit (Cmd+Q)
-     and reopen.
-  C) OAuth connector connected on claude.ai but Claude Code wasn't
-     restarted after → quit + reopen.
-  D) If using the personal-token path: node or npm isn't on PATH.
-     Install Node.js LTS from nodejs.org, then re-run /pickle-setup.
+2. Wait for the user to paste their `pk_...` token.
 
-Do not run me again until ClickUp is live.
+3. Once received, fetch their workspace ID:
+```bash
+curl -s -H "Authorization: TOKEN" "https://api.clickup.com/api/v2/team"
+```
+Extract `teams[0].id` and `teams[0].name`.
+
+4. Write to `~/.claude.json` using python3:
+```python
+import json, os
+path = os.path.expanduser("~/.claude.json")
+try:
+    config = json.load(open(path))
+except:
+    config = {}
+config.setdefault("mcpServers", {})["clickup"] = {
+    "command": "node",
+    "args": [os.path.expanduser("~/.claude/pickle-mcp/clickup/server.mjs")],
+    "env": {"CLICKUP_API_KEY": "TOKEN", "CLICKUP_TEAM_ID": "TEAM_ID"}
+}
+json.dump(config, open(path, "w"), indent=2)
+```
+
+5. Print:
+```
+✅ ClickUp connected — [workspace name]
+
+Now: fully quit Claude Code (Cmd+Q) and reopen.
+Then run /pickle-clickup 24h and you're live.
+```
+
+**If `server_missing`** — print:
+```
+❌ ClickUp isn't connected.
+
+  A) Just installed Pickle? Quit Claude Code (Cmd+Q) and reopen first.
+  B) Never installed? Paste this in chat:
+     Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
+  C) Node.js not found during install? Install from nodejs.org and reinstall.
 ```
 
 **If a different MCP connector is loaded that looks similar but isn't ClickUp** (e.g. Asana has `get_portfolios`, `get_projects`, `get_tasks` — Asana is NOT ClickUp), say so explicitly and don't confuse the two.
