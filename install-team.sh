@@ -50,7 +50,7 @@ echo ""
 echo "⏳ [2/3] Installing skill files ..."
 mkdir -p "$SKILLS_DIR"
 
-for skill in pickle-clickup pickle-slack pickle-update; do
+for skill in pickle-clickup pickle-slack pickle-update pickle-setup; do
   if [ -d "$TMPDIR/$skill" ]; then
     rm -rf "$SKILLS_DIR/$skill"
     cp -R "$TMPDIR/$skill" "$SKILLS_DIR/$skill"
@@ -77,7 +77,7 @@ else
 fi
 
 # ── Remove deprecated tools ───────────────────────────────────
-for deprecated in pickle-setup pickle-me pickle-report; do
+for deprecated in pickle-me pickle-report; do
   [ -d "$SKILLS_DIR/$deprecated" ] && rm -rf "$SKILLS_DIR/$deprecated"
 done
 
@@ -85,16 +85,11 @@ done
 mkdir -p "$PICKLE_MCP_DIR"
 echo "$LATEST_TAG" > "$PICKLE_MCP_DIR/.pickle_version"
 
-# ── Done ─────────────────────────────────────────────────────
+# ── Done — guided setup will auto-start ──────────────────────
 echo ""
 echo "════════════════════════════════════════════════════"
-echo "  ✅  Pickle skills installed — $LATEST_TAG"
+echo "  ✅  Pickle installed — $LATEST_TAG"
 echo "════════════════════════════════════════════════════"
 echo ""
-echo "One more step to connect ClickUp:"
-echo ""
-echo "  Get your API token from: app.clickup.com/settings/apps"
-echo "  It starts with pk_..."
-echo ""
-echo "  Paste your token as your next message and setup will complete."
+echo "PICKLE_SETUP_NEXT: /pickle-setup team"
 echo ""

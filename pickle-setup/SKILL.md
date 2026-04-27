@@ -64,13 +64,10 @@ If `PICKLE_VERSION = "team"`:
   In a pickle? Pickle sorts it.
 ════════════════════════════════════════════════════
 
-I'll set up your task inbox tools.
-About 2 minutes. No scripts, no terminal, no docs.
+I'll connect your ClickUp account and set up your inbox.
+About 2 minutes. Just answer a couple of questions.
 
-You'll get: /pickle-clickup (ClickUp inbox) and
-optionally /pickle-slack (Slack inbox) if your team uses Slack.
-
-Let's start.
+Let's go.
 ```
 
 If `PICKLE_VERSION = "manager"`:
@@ -167,7 +164,14 @@ Store as `ROLE_CONTEXT`.
 
 ## STEP 1 — ECOSYSTEM CHOICE
 
-**Both manager and team are asked the same ecosystem question:**
+**If `PICKLE_VERSION = "team"`:**
+Skip this question entirely. Hardcode:
+```
+ECO_CHOICE = "clickup"
+```
+Print nothing — proceed directly to STEP 1.5.
+
+**If `PICKLE_VERSION = "manager"`:**
 
 Print:
 ```
@@ -284,9 +288,16 @@ After fetch, confirm:
 
 ## STEP 2 — AUTH METHOD (per ecosystem)
 
-For each ecosystem the user picked, ask:
-
 ### For ClickUp
+
+**If `PICKLE_VERSION = "team"`:**
+Skip this question. Hardcode:
+```
+CLICKUP_AUTH = "pickle_mcp"
+```
+Print nothing — proceed directly to STEP 3 (pickle_mcp path).
+
+**If `PICKLE_VERSION = "manager"`:**
 
 Two free paths — let the user pick:
 
@@ -308,7 +319,7 @@ Two free paths — let the user pick:
   👉 Reply 1 or 2
 ```
 
-Store as `CLICKUP_AUTH` (`connector` or `pickle_mcp`). The connector is the smoother path for most people — 2 clicks and done. The personal-token path exists for teams who share one Claude account and need to keep each person's ClickUp data separate.
+Store as `CLICKUP_AUTH` (`connector` or `pickle_mcp`).
 
 ### For Slack
 
