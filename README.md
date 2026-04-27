@@ -84,11 +84,9 @@ Both versions use the same private "Task Board - By Pickle". Each ecosystem stay
 
 ## Install
 
-Open Claude Code. Copy the message below and paste it into the chat — Claude will run the install for you.
-
 ### 🧑‍💼 For managers and team leads
 
-Copy and paste this into Claude Code chat:
+Open Claude Code → paste this in the chat:
 
 ```
 Install Pickle (manager version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
@@ -98,13 +96,15 @@ Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-clickup-team-report` 
 
 Takes about 3 minutes. Quit Claude Code (Cmd+Q) and reopen — you're live.
 
-### 👤 For team members
+### 👤 For team members (shared Claude account — personal token path)
 
-Copy and paste this into Claude Code chat:
+Open Claude Code → press **⌃`** to open the built-in terminal → paste:
 
+```bash
+curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
 ```
-Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
-```
+
+The script will ask for your ClickUp API token and configure everything automatically. Get your token from [app.clickup.com/settings/apps](https://app.clickup.com/settings/apps) — it starts with `pk_`.
 
 Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-update`  
 (No team report — that's managers only.)
