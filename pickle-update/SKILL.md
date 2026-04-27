@@ -1,6 +1,6 @@
 ---
 name: pickle-update
-description: Update Pickle to the latest version. Auto-detects what you have installed (ClickUp, Slack, or both) and only updates those. Keeps your prefs, tokens, and task history untouched. Usage: /pickle-update. Use whenever the user asks to "update pickle", "upgrade pickle", "get the latest pickle", "pull new pickle", "refresh pickle", or sees a new release on the Pickle GitHub.
+description: Update Pickle to the latest version. Auto-detects what you have installed (ClickUp, Slack, or both) and only updates those. Keeps your prefs, tokens, and task history untouched. Also removes deprecated tools (pickle-setup, pickle-me) if found. Usage: /pickle-update. Use whenever the user asks to "update pickle", "upgrade pickle", "get the latest pickle", "pull new pickle", "refresh pickle", or sees a new release on the Pickle GitHub.
 argument-hint: (no arguments — just run it)
 disable-model-invocation: true
 ---
@@ -25,6 +25,9 @@ Print exactly this:
 I'll pull the latest from github.com/adityaarsharma/pickle and
 refresh only the skills you already have. Nothing new gets
 installed. Your prefs, tokens, and task history stay untouched.
+
+Deprecated tools (pickle-setup, pickle-me) will be removed
+if found — keeping your command palette clean.
 
 Takes ~30-60 seconds.
 ```
@@ -79,8 +82,10 @@ Check your internet connection and try again. If you're behind a
 corporate proxy, you can also clone the repo manually:
 
   git clone https://github.com/adityaarsharma/pickle.git
-  cp -R pickle/pickle-clickup ~/.claude/skills/
-  cp -R pickle/pickle-setup ~/.claude/skills/
+  cp -R pickle/pickle-clickup ~/.claude/skills/   # if ClickUp
+  cp -R pickle/pickle-slack   ~/.claude/skills/   # if Slack
+  cp -R pickle/pickle-report  ~/.claude/skills/   # managers only
+  cp -R pickle/pickle-update  ~/.claude/skills/
 ```
 
 ---
@@ -99,6 +104,15 @@ One last step so Claude Code picks up the new MCP tools:
    1. Fully quit Claude Code  (Cmd+Q on Mac — not just close)
    2. Reopen it
    3. Run /pickle-clickup 24h  (or /pickle-slack 24h)
+
+Your command palette will show only what you use:
+   /pickle-clickup    (if ClickUp connected)
+   /pickle-slack      (if Slack connected)
+   /pickle-report     (managers with ClickUp only)
+   /pickle-update     (always)
+
+pickle-setup and pickle-me are removed automatically — no
+setup wizard or retired commands cluttering your palette.
 
 Skill text changes apply immediately. Only the ClickUp MCP server
 code needs the quit+reopen to re-register tools.
