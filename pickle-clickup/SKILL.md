@@ -35,7 +35,7 @@ If `clickup_get_workspace_hierarchy` (and all other `clickup_*` tools) are missi
 
 Run: `test -f ~/.claude/pickle-mcp/clickup/server.mjs && echo "server_exists" || echo "server_missing"`
 
-**If `server_exists`** — Pickle is installed but ClickUp isn't configured yet. Immediately run `/pickle-setup team` — do not print an error, do not ask anything, just invoke the setup skill directly.
+**If `server_exists`** — Pickle is installed but ClickUp isn't configured yet. Immediately run `/pickle-setup team` to complete the guided setup.
 
 1. Print:
 ```

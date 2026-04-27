@@ -290,16 +290,7 @@ After fetch, confirm:
 
 ### For ClickUp
 
-**If `PICKLE_VERSION = "team"`:**
-Skip this question. Hardcode:
-```
-CLICKUP_AUTH = "pickle_mcp"
-```
-Print nothing — proceed directly to STEP 3 (pickle_mcp path).
-
-**If `PICKLE_VERSION = "manager"`:**
-
-Two free paths — let the user pick:
+Two free paths — ask both team and manager:
 
 ```
 ────────────────────────────────────────────────────
@@ -308,11 +299,11 @@ Two free paths — let the user pick:
 
   [1] Official Claude ClickUp connector — recommended
       → 2 clicks on claude.ai, no terminal needed
-      → Perfect for individual use
+      → Perfect if you have your own Claude account
       → Free
 
   [2] Pickle's own MCP + your ClickUp API token
-      → Recommended if your Claude account is shared with teammates
+      → Use this if your Claude account is shared with teammates
       → Gives each person their own isolated ClickUp session
       → Takes ~30 seconds (paste one token), 100% free
 
