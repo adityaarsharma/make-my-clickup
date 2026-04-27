@@ -33,7 +33,7 @@ Pickle creates prioritised tasks in your private "Task Board - By Pickle", ranke
 ## What makes Pickle different
 
 ### 🎯 Scored by YOUR role, not a generic rule
-During setup, Pickle asks your role and one line about what you do day-to-day. A manager sees approvals and blockers ranked higher; a team member sees their assigned tasks and pending replies. Role only reorders — it never filters anything out.
+Pickle asks your role and one line about what you do day-to-day on first run. A manager sees approvals and blockers ranked higher; a team member sees their assigned tasks and pending replies. Role only reorders — it never filters anything out.
 
 ### 📬 Catches DMs that others miss
 In a private DM or group DM that includes you, every unanswered question is yours — even if it's technically addressed to someone else in the thread. That's how work actually flows. Pickle knows this.
@@ -42,7 +42,7 @@ In a private DM or group DM that includes you, every unanswered question is your
 Teams write in whatever language is natural — and Pickle reads the *meaning*, not the exact phrase. "Can you confirm?", "please approve", and any local-language equivalent all register the same way.
 
 ### 🔔 Notifies you the moment a scan finishes
-Every Pickle run fires an instant inbox notification when done — a ClickUp deadline ping or Slack reminder — so you know the report is ready without watching Claude Code. No Business plan required.
+Each skill fires its own notification when done — ClickUp skills create a deadline task in your board, Slack skill sends a Slackbot reminder. No Business plan required. Nothing sent to any group or channel.
 
 ### 🚫 Never auto-sends
 Every follow-up message is drafted, shown to you, and only sent after you say so. If you've already nudged someone twice, Pickle refuses to send a third — it suggests you talk to them directly.
@@ -60,25 +60,25 @@ Both supported paths are 100% free. No trial, no paid tier, no credit card.
 ### 🧑‍💼 Pickle Manager
 For team leads and managers.
 
-| Command | What it does |
-|---------|-------------|
-| `/pickle-clickup [window]` | ClickUp inbox — what needs your action · fires ClickUp + Slack notification when done |
-| `/pickle-slack [window]` | Slack inbox — same, from Slack · fires Slack notification when done |
-| `/pickle-report [channel] [window]` | Team performance pulse — commitment vs execution · fires ClickUp notification when done |
-| `/pickle-update` | Update Pickle to the latest version |
+| Command | What it does | Notification |
+|---------|-------------|-------------|
+| `/pickle-clickup [window]` | ClickUp inbox — what needs your action | ClickUp 🔔 task |
+| `/pickle-slack [window]` | Slack inbox — same, from Slack | Slackbot reminder |
+| `/pickle-clickup-team-report [channel] [window]` | Team performance pulse — commitment vs execution | ClickUp 🔔 task |
+| `/pickle-update` | Update Pickle to the latest version | — |
 
 ### 👤 Pickle Team Member
 For individual contributors.
 
-| Command | What it does |
-|---------|-------------|
-| `/pickle-clickup [window]` | ClickUp inbox — what needs your action · fires ClickUp notification when done |
-| `/pickle-slack [window]` | Slack inbox — if your team uses Slack · fires Slack notification when done |
-| `/pickle-update` | Update Pickle to the latest version |
+| Command | What it does | Notification |
+|---------|-------------|-------------|
+| `/pickle-clickup [window]` | ClickUp inbox — what needs your action | ClickUp 🔔 task |
+| `/pickle-slack [window]` | Slack inbox — if your team uses Slack | Slackbot reminder |
+| `/pickle-update` | Update Pickle to the latest version | — |
 
-**The only difference:** Managers get `/pickle-report`. Team members don't.
+**The only difference:** Managers get `/pickle-clickup-team-report`. Team members don't.
 
-Both versions use `pickle-clickup` and `pickle-slack` — the same task board "Task Board - By Pickle", always private. Only the ecosystems you connect during setup get installed on disk.
+Both versions use the same private "Task Board - By Pickle". Each ecosystem stays completely isolated — ClickUp data never crosses into Slack and vice versa.
 
 ---
 
@@ -89,20 +89,20 @@ Both versions use `pickle-clickup` and `pickle-slack` — the same task board "T
 Paste into Claude Code:
 
 ```
-Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup manager
+Install Pickle from github.com/adityaarsharma/pickle
 ```
 
-Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-report` · `/pickle-update`  
-(Only the ecosystems you connect during setup are installed.)
+Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-clickup-team-report` · `/pickle-update`  
+(Only the ecosystems you connect get installed.)
 
-Takes about 3 minutes. Walks through name, role, ClickUp/Slack auth. One restart. You're live.
+Takes about 3 minutes. Pickle asks your name and role on first run, then connects ClickUp/Slack. One restart. You're live.
 
 ### 👤 For team members
 
 Paste into Claude Code:
 
 ```
-Install Pickle from github.com/adityaarsharma/pickle and run /pickle-setup team
+Install Pickle from github.com/adityaarsharma/pickle
 ```
 
 Installs: `/pickle-clickup` · `/pickle-slack` (if Slack used) · `/pickle-update`
@@ -110,8 +110,6 @@ Installs: `/pickle-clickup` · `/pickle-slack` (if Slack used) · `/pickle-updat
 Takes about 2 minutes. Connects ClickUp and optionally Slack.
 
 > **Repo:** [github.com/adityaarsharma/pickle](https://github.com/adityaarsharma/pickle)
-
-**Setup is one-time only** — `/pickle-setup` self-removes after it completes. Your palette stays clean. To re-run setup, paste the install command again.
 
 ---
 
@@ -126,8 +124,8 @@ Takes about 2 minutes. Connects ClickUp and optionally Slack.
 /pickle-slack              # same for Slack
 /pickle-slack 7d
 
-/pickle-report marketing-hq        # team pulse
-/pickle-report engineering-hq 14d  # two-week view
+/pickle-clickup-team-report marketing-hq        # team pulse
+/pickle-clickup-team-report engineering-hq 14d  # two-week view
 ```
 
 **For team members:**
@@ -145,9 +143,9 @@ ClickUp data and Slack data stay completely separate — never mixed.
 ## Pickle Manager — Team Performance Reports
 
 ```
-/pickle-report marketing-hq        # weekly report for the marketing team
-/pickle-report engineering-hq 14d  # 2-week view for engineering
-/pickle-report design-hq 7d        # design team pulse
+/pickle-clickup-team-report marketing-hq        # weekly report for the marketing team
+/pickle-clickup-team-report engineering-hq 14d  # 2-week view for engineering
+/pickle-clickup-team-report design-hq 7d        # design team pulse
 ```
 
 Pickle Manager scans what your team said they'd do (ClickUp chat) vs what they actually tracked (task cards, time logs, comments). Per person: delivery rate, time efficiency, update compliance, channel presence. Posts a smart, non-offensive report back to the department channel. Flags underperformers to you directly.
@@ -162,7 +160,7 @@ Pickle Manager scans what your team said they'd do (ClickUp chat) vs what they a
 
 **Truly Done standard:** A task only counts as complete when ALL THREE are true — status closed + description filled + time tracked.
 
-> **Scope:** ClickUp only for now. Slack report coming later. Requires ClickUp MCP connected.
+> **Scope:** ClickUp only. Requires ClickUp MCP connected.
 
 ---
 
@@ -178,7 +176,7 @@ Auto-detects what you have, pulls the latest, tells you to Cmd+Q and reopen Clau
 
 ## How Pickle connects to ClickUp / Slack
 
-Two free paths per ecosystem. `/pickle-setup` walks you through either.
+Two free paths per ecosystem.
 
 ### 🔵 ClickUp
 
@@ -231,7 +229,7 @@ Two free paths per ecosystem. `/pickle-setup` walks you through either.
 ## What Pickle will never do
 
 - ❌ Auto-send any message without your confirmation
-- ❌ Post in public channels on your behalf
+- ❌ Post in public channels or group DMs on your behalf
 - ❌ Hide a message because your role "doesn't care" about it
 - ❌ Send a third follow-up to someone you've already nudged twice
 - ❌ Upload your chat data anywhere — it all stays on your machine
@@ -244,8 +242,7 @@ Two free paths per ecosystem. `/pickle-setup` walks you through either.
 rm -rf \
   ~/.claude/skills/pickle-clickup \
   ~/.claude/skills/pickle-slack \
-  ~/.claude/skills/pickle-report \
-  ~/.claude/skills/pickle-setup \
+  ~/.claude/skills/pickle-clickup-team-report \
   ~/.claude/skills/pickle-update \
   ~/.claude/pickle-mcp \
   ~/.claude/pickle
