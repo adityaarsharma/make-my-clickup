@@ -84,30 +84,32 @@ Both versions use the same private "Task Board - By Pickle". Each ecosystem stay
 
 ## Install
 
+Open Claude Code. Copy the message below and paste it into the chat — Claude will run the install for you.
+
 ### 🧑‍💼 For managers and team leads
 
-Run in your terminal:
+Copy and paste this into Claude Code chat:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
+```
+Install Pickle (manager version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
 ```
 
 Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-clickup-team-report` · `/pickle-update`
 
-Takes about 3 minutes. Connect ClickUp and/or Slack after install, then restart Claude Code. You're live.
+Takes about 3 minutes. Quit Claude Code (Cmd+Q) and reopen — you're live.
 
 ### 👤 For team members
 
-Run in your terminal:
+Copy and paste this into Claude Code chat:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
+```
+Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
 ```
 
 Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-update`  
 (No team report — that's managers only.)
 
-Takes about 2 minutes. Connects ClickUp and optionally Slack.
+Takes about 2 minutes. Quit Claude Code (Cmd+Q) and reopen — you're live.
 
 > **Repo:** [github.com/adityaarsharma/pickle](https://github.com/adityaarsharma/pickle)
 
@@ -192,22 +194,9 @@ Two free paths per ecosystem.
 
 ### 💬 Slack
 
-| Path | Best for | Setup |
-|------|---------|-------|
-| **Official Claude Connector** (recommended) | Personal Claude accounts | claude.ai → Settings → Connectors → Slack → Connect. 2 clicks. |
-| **Your own Slack App + User OAuth token** | Shared accounts or locked workspaces | Create a free Slack app, add scopes, paste the `xoxp-` token. |
+Connect via claude.ai → Settings → Connectors → Slack → Connect. 2 clicks, free.
 
-**Getting your Slack User OAuth token:**
-1. Open [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → From scratch
-2. Name it "Pickle", pick your workspace
-3. Left sidebar → **OAuth & Permissions** → **User Token Scopes**:
-   ```
-   channels:history   groups:history   im:history      mpim:history
-   channels:read      groups:read      im:read         mpim:read
-   users:read         chat:write       search:read     reminders:write
-   lists:read         lists:write
-   ```
-4. **Install to Workspace** → copy the `xoxp-…` token → paste when prompted.
+If you're on a shared Claude account or a locked workspace and need a personal token path, see the [advanced Slack setup](https://github.com/adityaarsharma/pickle/wiki/slack-token) in the wiki.
 
 ---
 
