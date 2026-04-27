@@ -230,34 +230,6 @@ Then remove the `mcpServers.clickup` and/or `mcpServers.slack` blocks from `~/.c
 
 ---
 
-## Changelog
-
-### v2.7.9
-- Fixed setup cleanup — unused skills (e.g. `pickle-slack` when ClickUp-only chosen) now actually deleted, not just printed
-- Install scripts no longer pre-install all skills — setup installs only what you pick
-
-### v2.7.7
-- Setup onboarding is now personalised — reacts to your name, responds specifically to your role (marketing gets a different reply than a dev), echoes back what you said about your day-to-day
-
-### v2.7.6
-- Setup messages no longer render as empty grey code boxes — outputs as readable chat text
-- ClickUp API token path updated: Settings → Integrations & ClickApps → ClickUp API (old Apps path no longer works)
-
-### v2.7.5
-- Setup flow identical for team and manager — both get ecosystem choice (ClickUp / Slack / Both) and auth method choice (connector or MCP)
-
-### v2.7.3
-- Guided setup (`/pickle-setup`) restored and triggers automatically after install
-- No more broken interactive token prompt in Claude Code chat
-
-### v2.7.2
-- Separate install scripts: `install-manager.sh` and `install-team.sh`
-- `/pickle-update` never installs team report on team member machines
-- Notification fix: `/pickle-clickup` fires ClickUp 🔔 only, never Slack. `/pickle-slack` fires Slackbot only.
-- `/pickle-report` renamed to `/pickle-clickup-team-report`
-
----
-
 ## Credits
 
 Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Contributions welcome.
