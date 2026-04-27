@@ -786,6 +786,8 @@ This is the 1-click jump back to the original message. **Never omit the source l
 - Regular inbox item → `[action verb] [context] — [person/channel]` (max 80 chars)
 - Assigned comment → name as-is from the task title + `(assigned comment)`
 
+**⚠️ HARD RULE: ALL context goes in the `description` field of `clickup_create_task`. NEVER call `clickup_create_task_comment` to add source context or action steps — that puts it in a comment, not the description. The task description must be self-contained so the user can open it and immediately know what to do and jump to the source.**
+
 Call `clickup_create_task`:
 ```
 list_id:   TASK_BOARD_ID
@@ -797,7 +799,7 @@ assignees: [MY_USER_ID]
 tags:      ["pickle", "pickle-clickup"]
 description:
   🔗 SOURCE (1-click): [SOURCE_URL]
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ---
 
   📍 CONTEXT
   From: [sender] | In: [channel name OR task name]
@@ -815,7 +817,7 @@ description:
   • [step 2]
   • [step 3]
 
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ---
   🥒 pickle-clickup · by Aditya Sharma
   github.com/adityaarsharma/pickle
 ```
@@ -834,6 +836,8 @@ After creating, write the `message_id → task_id` entry into `state.json`.
 
 **Source link (REQUIRED):** Use the URL of MY original message (the ask), not their reply.
 
+**⚠️ HARD RULE: ALL context goes in the `description` field of `clickup_create_task`. NEVER call `clickup_create_task_comment` — context as a comment defeats the point. Open the task, see everything, click the link.**
+
 Call `clickup_create_task`:
 ```
 list_id:   TASK_BOARD_ID
@@ -845,7 +849,7 @@ assignees: [MY_USER_ID]
 tags:      ["pickle", "pickle-clickup", "follow-up"]
 description:
   🔗 SOURCE (1-click): [SOURCE_URL of my original ask]
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ---
 
   📍 WAITING ON: [their name]
   Asked on: [date] ([days_pending] days ago)
@@ -867,7 +871,7 @@ description:
   • Run /pickle-clickup [time] followup to confirm + send a reminder
   • Mark task complete if resolved offline
 
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ---
   🥒 pickle-clickup · by Aditya Sharma
   github.com/adityaarsharma/pickle
 ```
