@@ -4,7 +4,7 @@
 >
 > Every morning, 200+ messages across ClickUp and Slack. Half are noise. A few are decisions waiting on you. Pickle reads everything, keeps the few that matter, and drops them in your personal task board — ranked by what YOU actually do.
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever. **v2.7.0**
+Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever. **v2.7.9**
 
 ---
 
@@ -84,32 +84,23 @@ Both versions use the same private "Task Board - By Pickle". Each ecosystem stay
 
 ## Install
 
-### 🧑‍💼 For managers and team leads
+Open Claude Code and paste the relevant message into chat — Claude runs the install for you.
 
-Open Claude Code → paste this in the chat:
+### 🧑‍💼 For managers and team leads
 
 ```
 Install Pickle (manager version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
 ```
 
-Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-clickup-team-report` · `/pickle-update`
+### 👤 For team members
 
-Takes about 3 minutes. Quit Claude Code (Cmd+Q) and reopen — you're live.
-
-### 👤 For team members (shared Claude account — personal token path)
-
-Open Claude Code → press **⌃`** to open the built-in terminal → paste:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
+```
+Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
 ```
 
-The script will ask for your ClickUp API token and configure everything automatically. Get your token from [app.clickup.com/settings/apps](https://app.clickup.com/settings/apps) — it starts with `pk_`.
+Claude will show a summary of what the script does — click **Yes** to confirm. The guided setup (`/pickle-setup`) runs automatically after install and walks you through everything: name, role, ClickUp or Slack or both, connection method. Takes about 2 minutes.
 
-Installs: `/pickle-clickup` · `/pickle-slack` · `/pickle-update`  
-(No team report — that's managers only.)
-
-Takes about 2 minutes. Quit Claude Code (Cmd+Q) and reopen — you're live.
+Quit Claude Code fully (**Cmd+Q**) and reopen when done.
 
 > **Repo:** [github.com/adityaarsharma/pickle](https://github.com/adityaarsharma/pickle)
 
@@ -178,19 +169,18 @@ Auto-detects what you have, pulls the latest, tells you to Cmd+Q and reopen Clau
 
 ## How Pickle connects to ClickUp / Slack
 
-Two free paths per ecosystem.
-
 ### 🔵 ClickUp
 
 | Path | Best for | Setup |
 |------|---------|-------|
 | **Official Claude Connector** (recommended) | Personal Claude accounts | claude.ai → Settings → Connectors → ClickUp → Connect. 2 clicks. |
-| **Pickle's own MCP** (personal token) | Shared Claude accounts | Paste your ClickUp API token. Free, MIT-licensed MCP runs locally. |
+| **Pickle's own MCP** (personal token) | Shared Claude accounts | Paste your ClickUp API token during setup. Runs locally, free. |
 
 **Getting your ClickUp API token:**
-1. Open [app.clickup.com/settings/apps](https://app.clickup.com/settings/apps)
-2. Under "API Token" → click **Generate**
-3. Copy the `pk_…` token and paste when prompted. Stays in `~/.claude.json` — never uploaded.
+1. Open [app.clickup.com](https://app.clickup.com) → click your avatar → Settings
+2. Left sidebar → **Integrations & ClickApps** → **ClickUp API**
+3. Click **Generate** → copy the `pk_…` token
+4. Paste it when `/pickle-setup` asks. Stays in `~/.claude.json` — never uploaded.
 
 ### 💬 Slack
 
@@ -231,13 +221,40 @@ If you're on a shared Claude account or a locked workspace and need a personal t
 rm -rf \
   ~/.claude/skills/pickle-clickup \
   ~/.claude/skills/pickle-slack \
-  ~/.claude/skills/pickle-clickup-team-report \
   ~/.claude/skills/pickle-update \
   ~/.claude/pickle-mcp \
   ~/.claude/pickle
 ```
 
 Then remove the `mcpServers.clickup` and/or `mcpServers.slack` blocks from `~/.claude.json`.
+
+---
+
+## Changelog
+
+### v2.7.9
+- Fixed setup cleanup — unused skills (e.g. `pickle-slack` when ClickUp-only chosen) now actually deleted, not just printed
+- Install scripts no longer pre-install all skills — setup installs only what you pick
+
+### v2.7.7
+- Setup onboarding is now personalised — reacts to your name, responds specifically to your role (marketing gets a different reply than a dev), echoes back what you said about your day-to-day
+
+### v2.7.6
+- Setup messages no longer render as empty grey code boxes — outputs as readable chat text
+- ClickUp API token path updated: Settings → Integrations & ClickApps → ClickUp API (old Apps path no longer works)
+
+### v2.7.5
+- Setup flow identical for team and manager — both get ecosystem choice (ClickUp / Slack / Both) and auth method choice (connector or MCP)
+
+### v2.7.3
+- Guided setup (`/pickle-setup`) restored and triggers automatically after install
+- No more broken interactive token prompt in Claude Code chat
+
+### v2.7.2
+- Separate install scripts: `install-manager.sh` and `install-team.sh`
+- `/pickle-update` never installs team report on team member machines
+- Notification fix: `/pickle-clickup` fires ClickUp 🔔 only, never Slack. `/pickle-slack` fires Slackbot only.
+- `/pickle-report` renamed to `/pickle-clickup-team-report`
 
 ---
 
