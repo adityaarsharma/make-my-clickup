@@ -146,7 +146,7 @@ Also check legacy keys `"Pickle Inbox"`, `"Aditya's Task Board — Made from Pic
 
 9 columns on the list:
 - `Title` (text, primary), `Type` (Inbox · Follow-up), `Priority` (🔴🟠🟡⚪)
-- `From/To`, `Channel`, `Source Link` (1-click link), `Due` (date), `Status` (Open · Waiting · Done), `Quote` (context block)
+- `From/To`, `Channel`, `Source Link` (1-click link), `Due` (date), `Status` (To Do · In Progress · Today · Waiting · Complete), `Quote` (context block)
 
 If the tool returns `{ list_id: null }` — Slack Lists API not available. Report error, do not fall back to DM.
 
@@ -595,7 +595,7 @@ from_to:     "@[sender display name]"
 channel:     "#[channel name]" or "DM: [name]"
 source_link: PERMALINK  ← 1-click jump back to the original message (REQUIRED — never omit)
 due:         URGENT="Today" · HIGH="Tomorrow" · NORMAL="[end of week date]" · LOW="[next week date]"
-status:      "Open"
+status:      "To Do"
 quote:       "[Full ClickUp-style context block — see format below, max 2000 chars]"
 ```
 
@@ -644,6 +644,7 @@ source_link: PERMALINK  ← permalink to MY original message where I made the as
 due:         [above]
 status:      "Waiting"
 quote:       "[Full ClickUp-style context block — same format as Mode A, max 2000 chars]"
+
 ```
 Example:
 ```
@@ -671,9 +672,9 @@ user_id: MY_USER_ID
 
 ### Archive / Done cleanup rule
 
-- Status = **Done** items stay visible for 24 hours, then should be removed.
+- Status = **Complete** items stay visible for 24 hours, then should be removed.
 - To clean up: `/pickle-slack cleanup` (reads Done items via `slack_list_items_list`, deletes those older than 24h via `slack_list_item_delete`).
-- In the Slack List UI: click **Group by Status** to see Open / Waiting / Done sections separately.
+- In the Slack List UI: click **Group by Status** to see To Do / In Progress / Today / Waiting / Complete sections separately.
 
 ---
 
