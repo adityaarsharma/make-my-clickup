@@ -90,62 +90,70 @@ Every ecosystem now has its own AI: ClickUp Brain inside ClickUp, Slack AI insid
 
 That cross-tool synthesis is the entire point of Pickle.
 
-### Pickle ClickUp vs ClickUp Brain
+### Pickle on ClickUp vs ClickUp Brain
 
-| Capability | ClickUp Brain | Pickle |
+(For a ClickUp user — what does Pickle do that Brain doesn't, inside ClickUp.)
+
+| Capability inside ClickUp | ClickUp Brain | Pickle |
 |---|---|---|
-| Writes / summarises tasks inside ClickUp | ✅ | — |
+| Summarises a task | ✅ | ✅ |
 | Generates task descriptions for you | ✅ | — |
-| **Reads your Slack messages** | ❌ | ✅ |
-| **Reads your Microsoft Teams messages** | ❌ | ✅ |
-| **Compares "said in standup" vs "what the task shows"** | ❌ | ✅ |
-| Flags empty time entry descriptions | ❌ | ✅ |
+| Ranked inbox of comments + mentions across all your tasks | ❌ | ✅ |
+| Treats unresolved task comments assigned to you as inbox items | ❌ | ✅ |
+| Tracks comments you assigned to others (delegated work) | ❌ | ✅ |
+| Flags time entries with empty / "8h development"-style descriptions | ❌ | ✅ |
+| Detects zombie tasks (assigned, open 30+ days, no activity) | ❌ | ✅ |
+| Compares standup chat messages against task evidence | ❌ | ✅ |
 | Tracks blocker age across reports | ❌ | ✅ |
-| Detects copy-paste standups | ❌ | ✅ |
-| Tracks expired promises ("by Friday") | ❌ | ✅ |
-| Tracks tasks where YOU are the blocker | ❌ | ✅ |
-| Per-person weekly performance report | ❌ | ✅ |
-| Runs on your machine | ❌ (cloud-only) | ✅ |
+| Detects standup copy-paste (same text 3+ days) | ❌ | ✅ |
+| Tracks expired promises ("by Friday") on tasks | ❌ | ✅ |
+| Per-person weekly team performance report | ❌ | ✅ |
+| Runs on your machine | ❌ (cloud) | ✅ |
 
-**Where ClickUp Brain falls short:** it can write you a task description. It cannot see that your teammate said "done" in Slack 4 hours before logging 6 more hours on the same task with no comments. Pickle reads both surfaces — Brain only reads ClickUp.
+**Where ClickUp Brain falls short:** Brain writes for you — descriptions, summaries, action items. It doesn't audit. It can't tell you that a task has 40 hours logged with empty descriptions, or that the standup said "shipping today" 4 days ago. Pickle audits.
 
-### Pickle Slack vs Slack AI
+### Pickle on Slack vs Slack AI
 
-| Capability | Slack AI | Pickle |
+(For a Slack user — what does Pickle do that Slack AI doesn't, inside Slack.)
+
+| Capability inside Slack | Slack AI | Pickle |
 |---|---|---|
 | Summarises a thread or channel | ✅ | ✅ |
-| Daily recap of channels | ✅ | ✅ |
-| **Reads your ClickUp tasks** | ❌ | ✅ |
-| **Reads your Microsoft Teams chats** | ❌ | ✅ |
-| Tracks what YOU delegated to others (Mode B) | ❌ | ✅ |
-| Auto-drafts follow-ups with your approval | ❌ | ✅ |
-| Treats unanswered DMs as inbox items | ❌ | ✅ |
-| Compares "said" to "done" | ❌ | ✅ |
-| Runs on your machine | ❌ (cloud-only) | ✅ |
+| Daily channel recap | ✅ | ✅ |
+| Treats unanswered DMs as actionable inbox items | ❌ | ✅ |
+| Tracks @mentions across channels with no reply from you | ❌ | ✅ |
+| Tracks what YOU delegated and haven't heard back on (Mode B) | ❌ | ✅ |
+| Drafts follow-up messages and waits for your approval | ❌ | ✅ |
+| Refuses to send a 3rd nudge to the same person | ❌ | ✅ |
+| Scores Slack messages by your role (founder vs dev vs marketer) | ❌ | ✅ |
+| Reminds you back inside Slack when the scan finds something | ❌ | ✅ |
+| Runs on your machine | ❌ (cloud) | ✅ |
 
-**Where Slack AI falls short:** it summarises a thread that says "I'll merge the PR today." It cannot check whether the PR was actually merged in your ClickUp workspace. Pickle reads both.
+**Where Slack AI falls short:** Slack AI summarises. It doesn't follow up. A DM where someone's been waiting 4 days for your decision shows up in Pickle's inbox; Slack AI will tell you it exists if you ask, but won't surface it.
 
-### Pickle Teams vs Microsoft Copilot for Teams
+### Pickle on Teams vs Microsoft Copilot for Teams
 
-| Capability | Copilot for Teams | Pickle |
+(For a Teams user — what does Pickle do that Copilot doesn't, inside Teams.)
+
+| Capability inside Teams | Copilot for Teams | Pickle |
 |---|---|---|
 | Summarises a meeting | ✅ | meeting action items only |
 | Drafts replies in Teams | ✅ | — |
 | Reads Planner tasks assigned to you | ✅ | ✅ |
-| **Reads your ClickUp tasks** | ❌ | ✅ |
-| **Reads your Slack messages** | ❌ | ✅ |
-| Tracks delegated work as Mode B follow-ups | ❌ | ✅ |
-| Tracks blocker age across weeks | ❌ | ✅ |
-| Generates cross-platform team performance reports | ❌ | ✅ |
-| Detects Approvals app messages as inbox items | partial | ✅ |
+| Treats unanswered 1:1 DMs + group chats as inbox items | ❌ | ✅ |
+| Detects Approvals-app messages and adaptive cards as inbox items | partial | ✅ |
+| Tracks delegated Planner tasks (you assigned, awaiting completion) | ❌ | ✅ |
+| Pulls action items from meeting chat transcripts | partial | ✅ |
+| Refuses to send a 3rd follow-up to the same person | ❌ | ✅ |
+| Scores by your role (CEO vs dev vs marketer) | ❌ | ✅ |
 | Runs on your machine | ❌ (cloud) | ✅ |
 
-**Where Copilot for Teams falls short:** it pulls a meeting action item like "the report ships by Friday." It cannot follow up on Friday to check whether the report actually shipped in your ClickUp workspace. Pickle does that automatically.
+**Where Copilot for Teams falls short:** Copilot helps you write inside a meeting or thread. It doesn't run a daily audit. Action items from yesterday's meeting that nobody followed up on don't surface unless you specifically ask. Pickle surfaces them automatically.
 
 ### The one-line summary
 
-> ClickUp Brain reads tasks. Slack AI reads messages. Copilot reads Microsoft.
-> Pickle reads **all three** and tells you whether what was said matches what got done.
+> Native AIs (ClickUp Brain, Slack AI, Microsoft Copilot) **write** for you inside their tool.
+> Pickle **audits** what's already there and tells you what needs your action — across whichever platforms you use.
 
 ---
 
@@ -188,26 +196,19 @@ Pickle reads Slack via your own user token — not a shared app, not a connector
 
 ## Connect Microsoft Teams
 
-Two paths supported:
+Pickle reads Teams via your own Microsoft Graph API token — no third-party connector, your token stays on your machine. `/pickle-teams` walks you through it the first time you run it.
 
-**Option A: Official connector** (easiest)
-1. claude.ai → Settings → Connectors → Microsoft Teams → Connect
-2. Complete OAuth in your browser
-3. Restart Claude Code → run `/pickle-teams`
+**Persistent setup** (one-time, auto-refreshes after):
+1. [portal.azure.com](https://portal.azure.com) → App registrations → New registration ("Pickle CLI", Personal Microsoft accounts)
+2. API permissions → Add → Microsoft Graph (Delegated): `Chat.Read`, `ChannelMessage.Read.All`, `Team.ReadBasic.All`, `User.Read`, `Tasks.ReadWrite`, `offline_access`
+3. `/pickle-teams` runs the device-flow sign-in for you and saves the token to `~/.claude/pickle/teams-config.json`
 
-**Option B: Azure AD app token** (persistent, recommended for power users)
-1. portal.azure.com → App registrations → New registration
-2. Add Graph API permissions: `Chat.Read`, `ChannelMessage.Read.All`, `Team.ReadBasic.All`, `User.Read`, `Tasks.ReadWrite`, `offline_access`
-3. Run device flow auth — `/pickle-teams` will guide you through it step by step
-4. Token saved to `~/.claude/pickle/teams-config.json` and auto-refreshes
+**Quick test** (1-hour token, no Azure app needed):
+1. [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer) → sign in with your Teams account
+2. DevTools → Network → copy the `Authorization: Bearer …` value
+3. `/pickle-teams` will prompt to paste the token — done
 
-**Quick test with Graph Explorer** (1-hour token, no app needed):
-1. developer.microsoft.com/graph/graph-explorer → sign in
-2. Copy the `Authorization: Bearer eyJ...` token from DevTools
-3. `echo '{"access_token":"PASTE_HERE"}' > ~/.claude/pickle/teams-config.json`
-4. Run `/pickle-teams`
-
-Required permissions: `Chat.Read` · `ChannelMessage.Read.All` · `Team.ReadBasic.All` · `User.Read` · `Tasks.ReadWrite`
+Token file is created with `chmod 600`. Auto-refreshes if you used the Azure app path.
 
 ---
 

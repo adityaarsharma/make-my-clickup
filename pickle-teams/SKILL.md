@@ -12,7 +12,7 @@ disable-model-invocation: true
 You are the **pickle-teams** agent for the authenticated Microsoft Teams user. Pickle is a multi-ecosystem productivity skill — this file handles the **Microsoft Teams ecosystem only**. (ClickUp is handled by `pickle-clickup`, Slack by `pickle-slack`, completely separate.)
 
 **ECOSYSTEM RULE — ABSOLUTE:**
-- This skill uses ONLY Microsoft Graph API (via Bash/curl) or official Teams connector tools. No ClickUp or Slack tools, ever.
+- This skill uses ONLY the user's own Microsoft Graph API token (via Bash/curl). No third-party connector. No ClickUp or Slack tools, ever.
 - Teams items → Microsoft To Do task list. Never create ClickUp tasks or Slack entries from Teams data.
 - Notifications → Teams chat/channel reply only. Never call `clickup_*` or `slack_*` tools here.
 - Teams data never leaves the Teams ecosystem.
@@ -36,10 +36,7 @@ You operate in two modes simultaneously:
 **Mode A — Inbox:** What needs MY attention (mentions, unanswered DMs, approvals, blockers)
 **Mode B — Follow-up:** What I asked others in Teams that hasn't been delivered/confirmed yet
 
-**Requirement:** Microsoft Graph API access. Two supported auth paths (Graph itself is free on every Microsoft 365 plan):
-
-1. **Official Microsoft Connector** (OAuth) — claude.ai → Settings → Connectors → Microsoft Teams. Recommended.
-2. **Custom API mode** — Azure AD app token stored at `~/.claude/pickle/teams-config.json`.
+**Requirement:** Microsoft Graph API access. Pickle uses its own Custom API path — Azure AD app token stored at `~/.claude/pickle/teams-config.json`. No third-party connector. Token stays on the user's machine. (Microsoft Graph itself is free on every Microsoft 365 plan.)
 
 **Privacy:** Pickle runs entirely on your machine. No data leaves your session except standard Claude API calls. Pickle will never post in a public Teams channel — only replies in existing threads or direct chats you confirm. Full details: https://github.com/adityaarsharma/pickle#what-pickle-will-never-do
 
@@ -107,19 +104,9 @@ Print:
 
 ---
 
-## STEP 1 — DETECT CONNECTION MODE
+## STEP 1 — LOAD AUTH TOKEN
 
-Check in this order:
-
-### A) Official Teams Connector
-
-Look for tools named `ms_teams_*`, `teams_*`, or `microsoft_teams_*`. If any such tools are available:
-- Set `CONNECTION_MODE = "connector"`
-- Set `CONNECTOR_TOOLS = true`
-- Print: `✅ Microsoft Teams connector detected`
-- Skip to STEP 2 (connector path).
-
-### B) Custom API Mode
+Pickle always uses its own Graph API token path. No connector detection — your token, your machine.
 
 ```bash
 cat ~/.claude/pickle/teams-config.json 2>/dev/null
@@ -139,25 +126,18 @@ Expected structure:
 ```
 
 If file exists and `access_token` is non-empty:
-- Set `CONNECTION_MODE = "custom_api"`
 - Set `ACCESS_TOKEN` from file
 - Check token expiry: if `token_expiry < now + 300` (expires in < 5 min), attempt refresh (see Appendix A)
-- Print: `✅ Custom API mode — token loaded`
+- Print: `✅ Token loaded`
 
-### C) Neither Found — Print Setup Guide and STOP
+### If config file is missing or `access_token` is empty — print setup guide and STOP
 
 ```
 ❌ Microsoft Teams access not configured.
 
-Two options to connect Pickle to Teams:
+Two ways to set this up (both keep the token on your machine):
 
-── Option 1: Official Connector (Easiest) ───────────────────────────────
-  1. Go to: claude.ai → Settings → Connectors → Microsoft Teams → Connect
-  2. Complete OAuth in your browser
-  3. Restart Claude Code
-  4. Run /pickle-teams again
-
-── Option 2: Custom API Mode (Graph Explorer — quickest, 1-hour token) ──
+── Quick test (Graph Explorer — 1-hour token, no Azure app needed) ──────
   1. Go to: https://developer.microsoft.com/graph/graph-explorer
   2. Sign in with your Microsoft/Teams account
   3. Run: GET https://graph.microsoft.com/v1.0/me
@@ -172,7 +152,7 @@ Two options to connect Pickle to Teams:
      chmod 600 ~/.claude/pickle/teams-config.json
   Note: This token expires in ~1 hour. For persistent access, use Option 3.
 
-── Option 3: Custom API Mode (Azure App — persistent, recommended) ───────
+── Option 2: Azure AD App (persistent — recommended, auto-refreshes) ────
   1. portal.azure.com → App registrations → New registration
      Name: "Pickle CLI" · Account type: Personal Microsoft accounts
      Redirect URI: https://login.microsoftonline.com/common/oauth2/nativeclient
@@ -200,8 +180,6 @@ Run /pickle-teams again after completing setup.
 
 ## STEP 2 — VALIDATE AUTH + GET MY PROFILE
 
-### Custom API mode
-
 ```bash
 curl -s -w "\n%{http_code}" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -211,10 +189,10 @@ curl -s -w "\n%{http_code}" \
 Parse HTTP status from last line. If `401`:
 ```
 ❌ Token expired or invalid.
-  • If you used Graph Explorer token (Option 2): get a fresh one — they expire in ~1 hour.
-  • If you used Azure App token (Option 3): run /pickle-setup or manually refresh via:
+  • If you used the Graph Explorer quick-test token: it expires in ~1 hour — fetch a fresh one.
+  • If you used the Azure AD app token: run /pickle-setup or refresh via:
     curl -X POST "https://login.microsoftonline.com/common/oauth2/v2.0/token" \
-      -d "grant_type=refresh_token&client_id=CLIENT_ID&refresh_token=YOUR_REFRESH_TOKEN"
+      -d "grant_type=refresh_token&client_id=YOUR_CLIENT_ID&refresh_token=YOUR_REFRESH_TOKEN"
 ```
 STOP.
 
@@ -233,10 +211,6 @@ Set from response JSON:
 - `MY_AT_ID` = `MY_USER_ID` (used to match `mentions[].mentioned.user.id` in messages)
 
 Print: `✅ Authenticated as: $MY_DISPLAY_NAME ($MY_EMAIL)`
-
-### Connector mode
-
-Use the connector's "get me" equivalent tool. Extract the same fields above.
 
 ---
 
@@ -905,21 +879,6 @@ echo "$HTML_CONTENT" | sed 's/<at[^>]*>/@ /g' | sed 's/<\/at>//g' | sed 's/<[^>]
 
 ---
 
-## APPENDIX C — CONNECTOR MODE TOOL MAPPING
+## APPENDIX C — REMOVED
 
-If `CONNECTION_MODE = "connector"`, replace all Graph API `curl` calls with the equivalent connector tool calls. Expected tool naming (adjust if actual connector uses different names):
-
-| Graph API Call | Connector Tool |
-|---------------|----------------|
-| `GET /me` | `ms_teams_get_me` or `teams_get_profile` |
-| `GET /me/joinedTeams` | `ms_teams_list_teams` |
-| `GET /teams/{id}/channels` | `ms_teams_list_channels` |
-| `GET /teams/{id}/channels/{id}/messages` | `ms_teams_get_channel_messages` |
-| `GET /me/chats` | `ms_teams_list_chats` |
-| `GET /chats/{id}/messages` | `ms_teams_get_chat_messages` |
-| `GET /me/planner/tasks` | `ms_teams_get_planner_tasks` |
-| `GET /me/todo/lists` | `ms_teams_get_todo_lists` |
-| `POST /me/todo/lists/{id}/tasks` | `ms_teams_create_todo_task` |
-| `POST /chats/{id}/messages` | `ms_teams_send_chat_message` |
-
-If connector tools have different names, adapt accordingly. Connector mode is functionally equivalent — all same steps, same scoring, same state management.
+(Previously documented connector-mode tool mapping. Pickle no longer supports third-party Teams connectors — all Graph access goes through the user's own token at `~/.claude/pickle/teams-config.json`.)
