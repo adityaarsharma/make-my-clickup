@@ -77,8 +77,8 @@ if command -v node >/dev/null 2>&1; then
   # Copy update.sh
   [ -f "$TMPDIR/update.sh" ] && cp "$TMPDIR/update.sh" "$PICKLE_MCP_DIR/update.sh" && chmod +x "$PICKLE_MCP_DIR/update.sh"
 else
-  echo "   ℹ Node.js not found — skipping MCP server (use OAuth connector instead)"
-  echo "     OAuth path: claude.ai → Settings → Connectors → ClickUp → Connect"
+  echo "   ⚠️  Node.js not found — install Node.js LTS from nodejs.org then re-run"
+  echo "     (Pickle's ClickUp MCP requires Node.js)"
 fi
 
 # ── Remove deprecated tools ─────────────────────────────────────
@@ -98,18 +98,16 @@ echo "════════════════════════�
 echo ""
 echo "Next steps:"
 echo ""
-echo "  1. Connect ClickUp (pick ONE):"
-echo "     A) OAuth (recommended): claude.ai → Settings → Connectors → ClickUp"
-echo "     B) Personal token: already set up above (if Node.js found)"
+echo "  1. Connect ClickUp:"
+echo "     Token setup is handled by /pickle-setup manager (guided, ~30 sec)"
+echo "     If Node.js was missing above: install from nodejs.org, re-run this script first"
 echo ""
-echo "  2. Connect Teams (optional, pick ONE):
-     A) OAuth: claude.ai → Settings → Connectors → Microsoft Teams
-     B) Custom API: Azure AD app token → ~/.claude/pickle/teams-config.json
-        (run /pickle-teams for setup instructions)
-
-  3. Connect Slack (optional, pick ONE):"
-echo "     A) OAuth: claude.ai → Settings → Connectors → Slack"
-echo "     B) Personal token: api.slack.com/apps → create app → paste xoxp- token"
+echo "  2. Connect Teams (optional):"
+echo "     Custom API: Azure AD app token → ~/.claude/pickle/teams-config.json"
+echo "     (run /pickle-teams for setup instructions)"
+echo ""
+echo "  3. Connect Slack (optional):"
+echo "     Personal token: handled by /pickle-setup manager (guided)"
 echo ""
 echo "  4. Fully quit Claude Code (Cmd+Q) and reopen"
 echo ""

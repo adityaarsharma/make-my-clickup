@@ -313,69 +313,17 @@ After fetch, confirm:
 
 ### For ClickUp
 
-Two free paths — ask both team and manager:
-
-```
----
-  🔵 ClickUp — how do you want to connect? (both free)
----
-
-  [1] Official Claude ClickUp connector — recommended
-      → 2 clicks on claude.ai, no terminal needed
-      → Perfect if you have your own Claude account
-      → Free
-
-  [2] Pickle's own MCP + your ClickUp API token
-      → Use this if your Claude account is shared with teammates
-      → Gives each person their own isolated ClickUp session
-      → Takes ~30 seconds (paste one token), 100% free
-
-  👉 Reply 1 or 2
-```
-
-Store as `CLICKUP_AUTH` (`connector` or `pickle_mcp`).
+Set `CLICKUP_AUTH = "pickle_mcp"` — Pickle always uses its own free MCP server. Your token, your machine, no third-party connector. Proceed directly to STEP 3.
 
 ### For Slack
 
-(Only if they picked Slack or Both.) Two free options — ask which:
-
-```
----
-  💬 Slack — how do you want to connect? (both free)
----
-
-  [1] Official Claude Slack connector (2 clicks, OAuth)
-  [2] Your own Slack app + user token (full isolation)
-
-  👉 Reply 1 or 2
-```
-
-Store as `SLACK_AUTH` (`connector` or `token`). Both paths are free.
+(Only if they picked Slack or Both.) Set `SLACK_AUTH = "token"` — Pickle always uses your own Slack user token for full isolation. Proceed directly to STEP 3.
 
 ---
 
 ## STEP 3 — GUIDE THE AUTH
 
-### If `CLICKUP_AUTH = connector`:
-
-Print:
-```
----
-  🔵 ClickUp via Claude Connector
----
-
-Do this in your browser:
-  1. Open claude.ai
-  2. Go to Settings → Connectors
-  3. Find "ClickUp" → click Connect
-  4. Sign in to ClickUp and approve
-
-Tell me when you're done.
-```
-
-Wait for confirmation. Then → STEP 4 verification.
-
-### If `CLICKUP_AUTH = pickle_mcp` — Pickle's own free MCP
+### ClickUp — Pickle's own free MCP
 
 This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/server.mjs` — free forever, open source, no license keys.
 
@@ -475,22 +423,6 @@ Replace `<HOME>` with the user's actual home directory (e.g. `/Users/aditya`). N
 Confirm: `✓ Pickle ClickUp MCP configured for workspace "[NAME]".`
 
 ---
-
-### If `SLACK_AUTH = connector`:
-
-Print:
-```
----
-  💬 Slack via Claude Connector
----
-
-Do this in your browser:
-  1. Open claude.ai
-  2. Settings → Connectors → find "Slack" → Connect
-  3. Sign in and approve all scopes
-
-Tell me when done.
-```
 
 ### If `SLACK_AUTH = token`:
 
@@ -631,9 +563,7 @@ Then run the tool probes:
 
 | If user has | Call this tool | Expected |
 |-------------|----------------|----------|
-| ClickUp OAuth connector | connector's workspace tool | returns spaces |
-| Pickle ClickUp MCP (token path) | `clickup_get_workspace_hierarchy` | returns spaces |
-| Slack OAuth connector | connector's list tool | returns channels |
+| Pickle ClickUp MCP | `clickup_get_workspace_hierarchy` | returns spaces |
 | Slack MCP (token) | `conversations_list` / `channels_list` | returns channels |
 
 Report each as `✓ ClickUp connected — [workspace name]` or `✗ Not yet connected`.
@@ -856,9 +786,9 @@ Print a polished summary:
 - Never write to `~/.claude.json` without confirming with the user first
 - Never merge-overwrite existing MCP servers — preserve them
 - **Exactly ONE restart** — at Step 7, after ALL config is written. Never ask the user to restart mid-flow. If setup needs config changes, batch them all up front and restart once at the end.
-- **Keep it simple.** Pickle is either the Claude OAuth connector (2 clicks, recommended) or Pickle's bundled free MCP server (for shared accounts). Nothing else to consider.
+- **Keep it simple.** Pickle always uses its own bundled free MCP server — your token, your machine. Nothing else to consider.
 - Never guide the user to a paid upgrade to unlock features. If something requires paid ClickUp features, say so and offer a free workaround.
 - If user interrupts mid-setup, remember their progress and let them resume on next `/pickle-setup`
 - If anything fails, give a clear fix with a 1-line action — never a stack trace
 - Keep every section under ~12 lines of printed output — breathable, not a wall
-- **Skip restart entirely if no config changed.** If user picked OAuth-only for everything and no local MCP was written, verify immediately without asking for restart.
+- **Skip restart entirely if no config changed.** If MCP was already configured and no new config was written, verify immediately without asking for restart.

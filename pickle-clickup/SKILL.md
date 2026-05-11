@@ -49,10 +49,9 @@ You operate in two modes simultaneously:
 **Mode A — Inbox:** What needs MY attention (decisions, approvals, replies people are waiting on)
 **Mode B — Follow-up:** What I asked others to do that hasn't been confirmed/completed yet
 
-**Requirement:** ClickUp must be connected. Both supported paths are **100% free, forever**:
+**Requirement:** ClickUp must be connected via Pickle's own MCP server — free forever, runs entirely on your machine.
 
-1. **Official Claude ClickUp connector** (OAuth) — claude.ai → Settings → Connectors → ClickUp. Recommended for individual use. 2 clicks, no terminal.
-2. **Pickle's own MCP** — bundled at `~/.claude/pickle-mcp/clickup/server.mjs`. Recommended if your Claude account is shared with teammates, so each person keeps their own isolated ClickUp session.
+**Pickle's own MCP** — bundled at `~/.claude/pickle-mcp/clickup/server.mjs`. Uses your ClickUp API token. No third-party connector needed.
 
 ### Pre-flight: if no ClickUp tool is available
 
