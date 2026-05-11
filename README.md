@@ -1,8 +1,19 @@
-# 🥒 Pickle
+# 🥒 Pickle — AI Manager Productivity for Claude Code
 
-> **ClickUp Brain shows your tasks. Slack AI shows your messages. Pickle shows if they match.**
+> **The Claude Code skill suite for managers and teams using ClickUp, Slack, and Microsoft Teams.**
+> ClickUp Brain shows your tasks. Slack AI shows your messages. **Pickle shows if they match.**
 
-Built by [Aditya Sharma](https://adityaarsharma.com). MIT licensed. **Runs 100% on your machine.**
+[![GitHub release](https://img.shields.io/github/v/release/adityaarsharma/pickle?style=flat-square&color=22c55e)](https://github.com/adityaarsharma/pickle/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-orange?style=flat-square)](https://claude.com/claude-code)
+[![MCP](https://img.shields.io/badge/MCP-server-purple?style=flat-square)](https://modelcontextprotocol.io)
+[![GitHub stars](https://img.shields.io/github/stars/adityaarsharma/pickle?style=flat-square)](https://github.com/adityaarsharma/pickle/stargazers)
+
+**What it is:** A free, open-source Claude Code skill suite + MCP server for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence. Generates weekly performance reports automatically.
+
+**Built by [Aditya Sharma](https://adityaarsharma.com)** · **MIT licensed** · **Runs 100% on your machine** · **No telemetry, no phone-home, no cloud**
+
+**Keywords:** Claude Code · Claude Skill · MCP Server · ClickUp · Slack · Microsoft Teams · Team Management · Standup Bot · Performance Report · Engineering Manager · Remote Team · AI Productivity · Project Management AI
 
 ---
 

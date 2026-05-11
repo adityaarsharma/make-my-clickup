@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════
 #  🥒  Pickle — Manager Install
-#  Installs: pickle-clickup · pickle-slack · pickle-clickup-team-report · pickle-update
+#  Installs: pickle-clickup · pickle-slack · pickle-teams · pickle-report · pickle-update
 #
 #  Usage (paste into Claude Code terminal):
 #    curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash

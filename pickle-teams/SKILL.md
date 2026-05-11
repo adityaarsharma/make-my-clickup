@@ -436,7 +436,7 @@ Filter: `messageType == "message"` only.
 - Messages with `MY_USER_ID` in `mentions[]` → INBOX CANDIDATE
 - Messages from me with no responses → FOLLOWUP CANDIDATE
 - Meeting chats: also scan for patterns like "action item", "AI:", "TODO:", "@name will", "by [date]"
-- Meeting chats: scan for MY_DISPLAY_NAME in plain text references (e.g. "Aditya will handle") — not all meeting summaries use @mentions
+- Meeting chats: scan for `MY_DISPLAY_NAME` substring in plain text (e.g. if running user is "Priya" and text says "Priya will handle the API redesign") — not all meeting summaries use @mentions
 - Adaptive Card messages from the Approvals app: body contains "approval", "approve", "pending your review" → always INBOX CANDIDATE regardless of mention status
 - Loop components / collaborative notes in chat: treat as background context only, not inbox items
 - System messages (messageType != "message"): skip entirely — these are call-started, member-added, etc. events

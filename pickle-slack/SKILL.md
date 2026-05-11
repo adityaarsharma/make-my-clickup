@@ -85,7 +85,7 @@ Read user preferences. Check these paths in order (first match wins):
 2. `~/.claude/skills/pickle-setup/prefs.json` (fallback if setup hasn't self-removed yet)
 
 Extract:
-- `user_name`  → `USER_NAME` (e.g. "Aditya")
+- `user_name`  → `USER_NAME` (the runtime user's first name from prefs.json)
 - `user_role`  → `USER_ROLE` (e.g. "Founder / CEO", "Developer / Engineer")
 - `role_context` → `ROLE_CONTEXT` (free-text one-liner)
 **`LIST_NAME` is always: `"Task Board - By Pickle"`** — fixed, never user-configurable, never overridden by prefs.

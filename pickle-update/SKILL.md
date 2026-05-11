@@ -108,7 +108,8 @@ One last step so Claude Code picks up the new MCP tools:
 Your command palette will show only what you use:
    /pickle-clickup                (if ClickUp connected)
    /pickle-slack                  (if Slack connected)
-   /pickle-clickup-team-report    (managers with ClickUp only)
+   /pickle-teams                  (if Microsoft Teams connected)
+   /pickle-report                 (managers with ClickUp only)
    /pickle-update                 (always)
 
 pickle-setup and pickle-me are removed automatically — no
