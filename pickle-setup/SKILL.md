@@ -325,7 +325,7 @@ Set `CLICKUP_AUTH = "pickle_mcp"` — Pickle always uses its own MCP server (ope
 
 ### ClickUp — Pickle's own MCP server
 
-This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/server.mjs` — open source, runs locally. (Pickle itself is free during the public beta; paid plans launch later.)
+This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/server.mjs` — open source, runs locally.
 
 **Step A — Get the ClickUp API token.** Print:
 
@@ -418,7 +418,7 @@ If `npm` isn't available → print: `Install Node.js LTS from nodejs.org, then r
 }
 ```
 
-Replace `<HOME>` with the user's actual home directory (e.g. `/Users/aditya`). No `npx`, no license key, no paid dep.
+Replace `<HOME>` with the user's actual home directory (e.g. `/Users/aditya`). No `npx`, no license key, no external dependency.
 
 Confirm: `✓ Pickle ClickUp MCP configured for workspace "[NAME]".`
 
@@ -787,7 +787,7 @@ Print a polished summary:
 - Never merge-overwrite existing MCP servers — preserve them
 - **Exactly ONE restart** — at Step 7, after ALL config is written. Never ask the user to restart mid-flow. If setup needs config changes, batch them all up front and restart once at the end.
 - **Keep it simple.** Pickle always uses its own bundled MCP server (open source) — your token, your machine. Nothing else to consider.
-- Never block setup on payment. Pickle is free during the public beta; paid plans are introduced post-beta and never gate the install or core scan flow.
+- Setup must always work end-to-end with no payment step. Never block install, auth, or core scans behind any payment flow.
 - If user interrupts mid-setup, remember their progress and let them resume on next `/pickle-setup`
 - If anything fails, give a clear fix with a 1-line action — never a stack trace
 - Keep every section under ~12 lines of printed output — breathable, not a wall

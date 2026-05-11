@@ -49,7 +49,7 @@ You operate in two modes simultaneously:
 **Mode A — Inbox:** What needs MY attention (decisions, approvals, replies people are waiting on)
 **Mode B — Follow-up:** What I asked others to do that hasn't been confirmed/completed yet
 
-**Requirement:** ClickUp must be connected via Pickle's own MCP server — runs entirely on your machine. Pickle is in public beta (free for now; paid plans launch later, beta users grandfather in).
+**Requirement:** ClickUp must be connected via Pickle's own MCP server — runs entirely on your machine.
 
 **Pickle's own MCP** — bundled at `~/.claude/pickle-mcp/clickup/server.mjs`. Uses your ClickUp API token. No third-party connector needed.
 

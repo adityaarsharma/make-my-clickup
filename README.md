@@ -9,11 +9,9 @@
 [![MCP](https://img.shields.io/badge/MCP-server-purple?style=flat-square)](https://modelcontextprotocol.io)
 [![GitHub stars](https://img.shields.io/github/stars/adityaarsharma/pickle?style=flat-square)](https://github.com/adityaarsharma/pickle/stargazers)
 
-**What it is:** An open-source Claude Code skill suite + MCP server for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence. Generates weekly performance reports automatically.
+**What it is:** A Claude Code skill suite + MCP server for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence. Generates weekly performance reports automatically.
 
-> **🧪 Public beta — free for now.** 1 user, 1 workspace, no credit card. Paid plans launch after beta. Beta users grandfather into a discounted rate.
-
-**Built by [Aditya Sharma](https://adityaarsharma.com)** · **Source-available, MIT-licensed** · **Runs 100% on your machine** · **No telemetry, no phone-home, no cloud**
+**Built by [Aditya Sharma](https://adityaarsharma.com)** · **Runs 100% on your machine** · **No telemetry, no phone-home, no cloud**
 
 **Keywords:** Claude Code · Claude Skill · MCP Server · ClickUp · Slack · Microsoft Teams · Team Management · Standup Bot · Performance Report · Engineering Manager · Remote Team · AI Productivity · Project Management AI
 
@@ -204,8 +202,7 @@ Remove the `mcpServers.clickup` and/or `mcpServers.slack` entries from `~/.claud
 - Post to public channels or group DMs on your behalf
 - Send a third follow-up to someone you've already nudged twice
 - Upload your tokens, messages, or task data anywhere
-- Charge you during the public beta — paid plans launch later; beta users get the founding-member rate
 
 ---
 
-Built by [Aditya Sharma](https://adityaarsharma.com) · [adityaarsharma.com/pickle](https://adityaarsharma.com/pickle) · MIT License
+Built by [Aditya Sharma](https://adityaarsharma.com) · [adityaarsharma.com/pickle](https://adityaarsharma.com/pickle)

@@ -1,8 +1,6 @@
 # @pickle/clickup-mcp
 
-A **free, open-source, MIT-licensed** ClickUp MCP server for the [Pickle](https://github.com/adityaarsharma/pickle) project.
-
-Built as a drop-in replacement for `@taazkareem/clickup-mcp-server` after it moved to a paid model. Pickle needs a forever-free alternative, and this is it.
+The ClickUp MCP server bundled with [Pickle](https://github.com/adityaarsharma/pickle). Pure Node.js, runs locally, no external service.
 
 - Pure Node.js (ESM). **No build step**, no TypeScript compilation.
 - Only two dependencies: `@modelcontextprotocol/sdk` and `zod`.
@@ -98,8 +96,8 @@ All tool names match the names referenced by the `pickle-clickup` skill, so Pick
 - **Tools not visible in Claude Code** — confirm the absolute path in `args[0]` points at `server.mjs`, then fully quit and reopen Claude Code.
 - **`HTTP 429` loops** — the server already handles these. If you see the underlying error surface to the LLM, you exhausted all 5 retries; wait a minute and try again.
 
-## License
+## Privacy
 
-MIT. Forever free. No phone-home, no license gating, no paid tier.
+No phone-home. No license gating. Talks only to `https://api.clickup.com` using your personal token. All state is in-memory; nothing is written to disk by this server.
 
 Built for [Pickle](https://github.com/adityaarsharma/pickle) by [Aditya Sharma](https://github.com/adityaarsharma).
