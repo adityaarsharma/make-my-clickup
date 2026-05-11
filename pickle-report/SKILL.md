@@ -52,7 +52,26 @@ You are the **pickle-report** agent for the authenticated ClickUp manager runnin
 
 Read `$ARGUMENTS`. Extract:
 - `CHANNEL_NAME` — strip leading `#`, lowercase
-- `WINDOW_DAYS` — parse `7d` → 7, `14d` → 14, `1m` → 30. Default: 7
+- `WINDOW_DAYS` — parse `7d` → 7, `14d` → 14, `1m` → 30
+
+**MANDATORY: If either argument is missing, STOP and ask. Never assume defaults. Never proceed without both.**
+
+```
+If CHANNEL_NAME missing AND WINDOW_DAYS missing:
+  → Ask: "Which channel and time window? e.g. marketing-hq 7d"
+  → STOP. Wait for reply.
+
+If CHANNEL_NAME missing only:
+  → Ask: "Which channel? e.g. marketing-hq"
+  → STOP. Wait for reply.
+
+If WINDOW_DAYS missing only:
+  → Ask: "Which time window? e.g. 7d, 14d, 1m"
+  → STOP. Wait for reply.
+```
+
+Do NOT proceed until both `CHANNEL_NAME` and `WINDOW_DAYS` are explicitly provided.
+
 - `WINDOW_LABEL` — e.g. "Last 7 days (Apr 16 – Apr 23)"
 - `TIME_CUTOFF_MS` — `Date.now() - (WINDOW_DAYS * 86400000)`
 
@@ -635,74 +654,98 @@ Patterns get stronger language in the report + direct flag to manager.
 
 **Task link rule:** Every task cited MUST include its full ClickUp URL (`https://app.clickup.com/t/[task_id]`).
 
-**Per-person block format (canonical — do not deviate):**
+**Per-person block format — HARDCODED. Do not deviate. Every member gets every section.**
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━
-@[username] [STATUS_EMOJI] [Status label] — [one-line summary]
-━━━━━━━━━━━━━━━━━━━━━━━━━
+---
 
-📋 Said [date of most recent standup or DM update]:
-[Exact bullet-point summary of what they said they worked on and plan to do]
-[Note if DM updates differ from channel standups — "channel standup said X, DM said Y"]
+## 👤 [FULL NAME]
 
-📋 Week in review ([date range]):
-[Day-by-day or grouped summary — channel standups + DM updates + notable task comments]
-[Flag days on leave with reason if known]
+**📅 [Date] ([Mon])**
+- [Standup/DM/task activity bullet — cite exact source]
+- [Second bullet if applicable]
 
-📊 Verified output:
-• [Task name] [link] — [status] ✅/⚠️/❌ — [Xh tracked] — Evidence: [source(s)]
-• [Task name] [link] — [status] — [Xh] — Evidence: [time entries: X/Y described | task comment: delivery note May X | DM: reported done]
-[List all tasks with evidence chain. Never omit the evidence source.]
+**📅 [Date] ([Tue])**
+- [Activity bullets — one per distinct standup claim, DM update, or task event]
 
-❌ Overdue deliverables: (only if applicable)
-1. [Task name] [link]
-   Priority: [URGENT/HIGH/NORMAL]
-   Due: [original due date] — [X days/months overdue]
-   Status: "[current status]"
-   Time tracked: [Xh] | Task comments: [Y] | Last update: [date]
-   [Specific question or observation]
+**📅 [Date] ([Wed])**
+- [Activity bullets]
 
-🧟 Zombie tasks — [N] tasks stale 5+ days, not complete: (only if applicable)
-Notable:
-• [link] — [Task name] — [X] days stale — [Xh tracked] — desc: [empty/partial/good] — comments: [N in window]
-[List top offenders with full evidence state]
+**📅 [Date] ([Thu])**
+- [Activity bullets]
 
-📝 Descriptions & documentation:
-• Time entries: [X] of [Y] have session descriptions
-• Task cards: [X] of [Y] have progress descriptions (Score ≥ 2)
-• Delivery via task comment: [N tasks documented in comments vs description]
-• DM-only completions: [N tasks where work confirmed in DM but not on card]
-• [Specific flag with task link if applicable]
+**📅 [Date] ([Fri])**
+- [Activity bullets]
 
-📩 DM & group DM activity:
-[Summary of what was communicated in DMs vs channel — highlight gaps and confirmations]
-[If no DM exists or no in-window messages: "No DM activity in window"]
+**📅 [Date–Date] (Sat–Sun)**
+- No standup (weekend) — OR — [any weekend activity if found]
 
-Truly Done check:
-• [Task name] → ✅ TRULY DONE / ⚠️ GHOST CLOSURE / ⚠️ UNTRACKED COMPLETION / ❌ NOT DONE
-  Evidence: [what confirmed it]
-  (Truly Done = status closed + evidence of work done + time tracked — all three required)
+[Add or remove day blocks based on the window. For non-7d windows, adjust accordingly.]
+[If a member was on leave on a day, note it in that day's block instead of skipping the block.]
 
-🔴 Blockers: (always include — "None" if clear)
-• [Blocker] — logged on card: yes/no — mentioned in: [channel/DM/task comment]
-• Or: None identified
+**📋 Week in Review ([date range])**
+[1-3 sentence summary paragraph — cover delivery quality, patterns, DM vs channel alignment, notable highs/lows. Cite specific tasks by name.]
 
-📌 Things from [manager name] for [Name]: (ALWAYS include — things manager owes this person)
-• [Specific action needed] — [task link if exists]
-• [Decision pending] — [source: DM date / task comment]
-• Or: None currently
+**✅ Verified Output**
+- ✅ [Task name] ([task_id]) — [status + evidence source: time entry/task comment/DM/status change]
+- ⚠️ [Task name] ([task_id]) — [PARTIAL: what's done, what's missing]
+- ❌ [Task name] ([task_id]) — [NOT DONE: claimed but no evidence]
+[MANDATORY: Include EVERY task the member touched in the window — assigned, updated, commented on, or time-tracked. No task is omitted because it's minor or routine. If 12 tasks were touched, list all 12.]
 
-✅ Verdict: [Work verified / Partially verified / Not verifiable / On leave] — [1-2 sentence summary citing primary evidence]
+**🔍 Truly Done Check**
+- [Task name] ([task_id]): ✅ TRULY DONE — closed + [evidence type] + time tracked
+- [Task name] ([task_id]): ⚠️ PARTIAL — [what's missing: description/time/status]
+- [Task name] ([task_id]): ❌ NOT DONE — [claimed in standup/DM, still open, no evidence]
+[Truly Done = status closed + (description filled OR delivery comment) + time tracked — all three required]
+[MANDATORY: Every task from Verified Output must appear here with its Truly Done verdict. No task skipped.]
 
-Score: [X%] — [🟢 On track / 🟡 Needs attention / 🟠 Underperforming / 🔴 Critical]
+**🔴 Blockers**
+- [Blocker description — where raised: channel/DM/task comment] — or: None
+
+**📌 Things from Aditya**
+- 📌 [Specific action Aditya owes this member] — [source: DM date / task link] — or: None
+
+**Score: [X%] — [Excellent / Strong / Steady / Needs Attention / Below Standard / Critical]**
 Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
 
-💬 Action items for @[username]:
-1. [Specific ask with task link — what to do, on which card, by when]
-2. [Specific ask]
-3. [Specific ask if needed]
+**Action items for @[username]:**
+1. [Specific numbered action — what to do, on which task, by when]
+2. [Specific numbered action]
+3. [If applicable]
 ```
+
+**After all member blocks, always add a Team Summary block:**
+
+```
+---
+
+## 🏁 TEAM SUMMARY — [DATE RANGE]
+
+| Member | Score | Trend | Flag |
+|---|---|---|---|
+| [Name] | [X%] | ↑/→/↓/↑↑ | [One-line flag or None] |
+[All members listed, ordered highest to lowest score]
+
+**🎯 [Manager Name] — Action Required**
+1. [Numbered manager action items — specific, with task references]
+2. [...]
+
+**🏆 Best Hygiene This Week**
+[Member name] — [specific reason]
+
+**📈 Most Improved** (only if applicable)
+[Member name] — [specific reason]
+```
+
+**FORMAT RULES — NON-NEGOTIABLE:**
+- Every member gets every section — even if "None" or "No standup (weekend)"
+- Day blocks must be per actual calendar day in the window — not grouped or summarised
+- Blockers section is MANDATORY — "None" is a valid entry
+- Things from Aditya section is MANDATORY — "None" is a valid entry
+- Score line must always include all four sub-scores
+- Action items must be numbered, specific, and actionable
+- Full report for 9 members will be 300+ lines — that is correct. Never compress.
+- Post in multiple channel messages if needed (ClickUp character limit) — never truncate content to fit one message
 
 **Rules for every block:**
 - Every flagged task must include its ClickUp link
