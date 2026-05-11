@@ -197,7 +197,22 @@ Use the patch number (`2.9.X`) for doc/positioning changes, minor (`2.X.0`) for 
 
 ---
 
-## 14. When in doubt — the user's mental model wins
+## 14. Pickle is LLM-agnostic — public copy must reflect this
+
+The MCP server is the core product. It runs in **any MCP-compatible AI host**, not just Claude. Public-facing copy (README, GitHub description, badges, topics, release notes, landing page) must NEVER make Pickle sound Claude-only.
+
+- ❌ Banned in public copy: "Claude Code skill suite" as the primary description, "AI for Claude Code" as the tagline, badges that only mention Claude, topics like `claude-plugin` / `claude-skill` / `anthropic`.
+- ✅ Use: "MCP server + (optional) Claude Code skills", "Works with Claude, Cursor, Codex, Cline, any MCP host", topics like `mcp`, `mcp-server`, `mcp-tools`, `cursor`, `codex`, `llm`, `llm-agent`, `ai-agent`.
+
+Skills are a Claude-Code/Desktop convenience layer (slash commands). The MCP server is the value. When a user in Cursor or Codex looks for "MCP servers for ClickUp" or "MCP for Slack", Pickle should be in the result set — that's the discovery surface.
+
+Inside the SKILL.md files (which Claude Code/Desktop read), it's fine to mention "Claude Code" since that's the runtime — those files are Claude-specific by design. But README, package.json descriptions, release notes, and the landing page are seen by everyone in the MCP ecosystem.
+
+GitHub topics (max 20) should always include: `mcp`, `mcp-server`, `mcp-tools`, `model-context-protocol`, plus at least 2 non-Claude MCP-host names (`cursor`, `codex`, `cline`, `continue`, `goose`, `zed`) for discoverability across that ecosystem.
+
+---
+
+## 15. When in doubt — the user's mental model wins
 
 The user is Aditya Sharma. His mental model of Pickle lives in `~/.claude/CLAUDE.md` (global) and is reinforced through the chat history. When public-facing copy contradicts that mental model, fix the copy, not the mental model.
 

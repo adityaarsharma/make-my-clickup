@@ -1,19 +1,44 @@
-# 🥒 Pickle — AI Manager Productivity for Claude Code
+# 🥒 Pickle — AI Manager Productivity for Any MCP Host
 
-> **The Claude Code skill suite for managers and teams using ClickUp, Slack, and Microsoft Teams.**
+> **MCP server + skills for managers and teams using ClickUp, Slack, and Microsoft Teams.**
 > ClickUp Brain shows your tasks. Slack AI shows your messages. **Pickle shows if they match.**
 
 [![GitHub release](https://img.shields.io/github/v/release/adityaarsharma/pickle?style=flat-square&color=22c55e)](https://github.com/adityaarsharma/pickle/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-orange?style=flat-square)](https://claude.com/claude-code)
-[![MCP](https://img.shields.io/badge/MCP-server-purple?style=flat-square)](https://modelcontextprotocol.io)
+[![MCP](https://img.shields.io/badge/MCP-compatible-purple?style=flat-square)](https://modelcontextprotocol.io)
+[![Works with](https://img.shields.io/badge/Works%20with-Claude%20·%20Cursor%20·%20Codex%20·%20Cline-orange?style=flat-square)](#works-with)
 [![GitHub stars](https://img.shields.io/github/stars/adityaarsharma/pickle?style=flat-square)](https://github.com/adityaarsharma/pickle/stargazers)
 
-**What it is:** A Claude Code skill suite + MCP server for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence. Generates weekly performance reports automatically.
+**What it is:** An MCP server + (optional) skills for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence. Generates weekly performance reports automatically.
+
+**Pickle is LLM-agnostic.** The MCP server runs in any MCP-compatible AI client. The slash-command skills are a Claude Code / Claude Desktop convenience layer on top — everything Pickle does is also accessible by calling the MCP tools directly from Cursor, Codex, Cline, Continue, Zed, or your own MCP host.
 
 **Built by [Aditya Sharma](https://adityaarsharma.com)** · **Runs 100% on your machine** · **No telemetry, no phone-home, no cloud**
 
-**Keywords:** Claude Code · Claude Skill · MCP Server · ClickUp · Slack · Microsoft Teams · Team Management · Standup Bot · Performance Report · Engineering Manager · Remote Team · AI Productivity · Project Management AI
+**Keywords:** MCP · MCP Server · Model Context Protocol · Cursor · Codex · ClickUp AI · Slack AI · Microsoft Teams · Team Management · Standup Bot · Performance Report · Engineering Manager · AI Productivity · Self-Hosted AI Tool · LLM Agent · Project Management AI
+
+---
+
+## <a id="works-with"></a>Works with any MCP-compatible AI client
+
+Pickle ships in two parts:
+
+1. **The MCP server** (the core) — a Node.js MCP server that talks to ClickUp, Slack, and Microsoft Graph. Runs locally. Works in **any MCP host**.
+2. **The skills** (optional, Claude-only) — SKILL.md files that turn the MCP tools into slash commands (`/pickle-clickup`, `/pickle-report`, etc.) inside Claude Code / Claude Desktop.
+
+| Client | MCP support | How you use Pickle |
+|---|---|---|
+| **Claude Code** | ✅ | Install skills → slash commands work |
+| **Claude Desktop** | ✅ | Install MCP server → call tools via prompt |
+| **Cursor** | ✅ | Add MCP server in Settings → Pickle tools appear |
+| **Codex** (OpenAI Agent SDK) | ✅ | Register Pickle as an MCP tool source |
+| **Cline** | ✅ | MCP server config → Pickle tools available |
+| **Continue** | ✅ | Add MCP server to `~/.continue/config.json` |
+| **Zed** | ✅ | MCP support added in 2025; configure as a context server |
+| **Goose** | ✅ | `goose extension add` with the Pickle MCP path |
+| **Anything that speaks MCP** | ✅ | Point it at `~/.claude/pickle-mcp/clickup/server.mjs` |
+
+The slash-command UX is the fastest path, but everything Pickle does (scanning DMs, building reports, drafting follow-ups) is achievable in any MCP host by calling the tools directly. The skills are convenience, not lock-in.
 
 ---
 
