@@ -61,43 +61,26 @@ Every pattern below is something Pickle detects automatically across ClickUp, Sl
 
 ---
 
-## Three platforms. Three independent tools.
+## How you use Pickle
 
-Pickle covers **ClickUp**, **Slack**, and **Microsoft Teams**. Each ecosystem stays completely isolated — data never crosses between them.
-
-### 👤 Personal inbox — what needs your action
+Pickle is one product. It reads three platforms — **ClickUp**, **Slack**, **Microsoft Teams** — and keeps each ecosystem isolated (data never crosses between them).
 
 ```
-/pickle-clickup 24h          # ClickUp inbox — last 24 hours
-/pickle-clickup 7d followup  # last week + draft follow-ups
-/pickle-slack 24h            # Slack inbox
-/pickle-teams 24h            # Microsoft Teams inbox (DMs, channels, Planner)
-/pickle-teams 7d followup    # Teams + draft follow-up messages
+/pickle-clickup 24h          # what needs you in ClickUp — last 24h
+/pickle-clickup 7d followup  # past week + draft follow-ups for stuff you're owed
+/pickle-slack 24h            # same, from Slack
+/pickle-teams 24h            # same, from Microsoft Teams (incl. Planner + meetings)
 ```
 
-Each command reads every surface in that ecosystem — DMs, channels, group chats, task/card comments, threaded replies, assigned comments, reminders, Planner tasks — and gives you a ranked inbox of what needs your action right now.
+Each command scans every surface in that ecosystem — DMs, channels, group chats, task/card comments, threaded replies, assigned comments, reminders — and gives you a ranked inbox of what needs your action right now.
 
-### 🧑‍💼 For managers — `/pickle-report`
-
-Scans your team's standups, DMs, task cards, time entries, and comments in ClickUp. Compares commitment to evidence. Posts a full per-person report to the team channel with scores, patterns, action items, and private escalation flags.
+**If you also manage a team in ClickUp,** Pickle has a Manager Mode — same install, one extra command that points at a department channel and posts a team-performance report there:
 
 ```
-/pickle-report marketing-hq 7d     # weekly team pulse
-/pickle-report engineering-hq 14d  # two-week view
-/pickle-report design-hq 1m        # monthly rollup from stored reports (no ClickUp scan needed)
+/pickle-report marketing-hq 7d   # weekly pulse for the marketing-hq channel
 ```
 
-**What the report covers per person:**
-- Per-day activity breakdown (every standup, DM, task event)
-- Verified Output — every task touched, with evidence source
-- Truly Done Check — status closed + description + time tracked (all three required)
-- Score: Delivery % | Time Docs % | Card Updates % | Presence %
-- Team velocity trend across last 4 reports (↑↑ ↑ → ↓ ↓↓)
-- Standup copy-paste detection — same update 3+ days = flagged
-- Expired promises — "will finish by Friday" + still open = flagged
-- Blocker age — how many days unresolved, auto-escalates at 14 days
-- Escalation watch — 3+ declining reports or same unresolved flag 4+ weeks
-- Private manager section — what *you* need to unblock
+Manager Mode uses the same MCP server and the same patterns from the table above — it just applies them across an entire team's week and posts the synthesis back to the channel.
 
 ---
 
