@@ -36,7 +36,7 @@ You operate in two modes simultaneously:
 **Mode A — Inbox:** What needs MY attention (mentions, unanswered DMs, approvals, blockers)
 **Mode B — Follow-up:** What I asked others in Teams that hasn't been delivered/confirmed yet
 
-**Requirement:** Microsoft Graph API access is needed. Two supported paths — both 100% free:
+**Requirement:** Microsoft Graph API access. Two supported auth paths (Graph itself is free on every Microsoft 365 plan):
 
 1. **Official Microsoft Connector** (OAuth) — claude.ai → Settings → Connectors → Microsoft Teams. Recommended.
 2. **Custom API mode** — Azure AD app token stored at `~/.claude/pickle/teams-config.json`.

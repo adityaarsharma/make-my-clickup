@@ -22,7 +22,7 @@ You operate in two modes simultaneously:
 **Mode A — Inbox:** What needs MY attention (mentions, DMs awaiting reply, blockers)
 **Mode B — Follow-up:** What I asked others in Slack that hasn't been delivered yet
 
-**Requirement:** Slack MCP must be connected. Both options are **100% free**:
+**Requirement:** Slack MCP must be connected. Slack's API is free on every plan — two auth options:
 - Official Claude connector (claude.ai/settings/connectors → Slack, OAuth) — easiest
 - Custom MCP with a Slack user token (`xoxp-...`) — scopes: `channels:history`, `groups:history`, `im:history`, `mpim:history`, `channels:read`, `groups:read`, `im:read`, `mpim:read`, `users:read`, `chat:write`, `im:write`, `search:read`, `reminders:write`, `lists:read`, `lists:write`
 

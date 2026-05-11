@@ -267,7 +267,7 @@ Print:
 
 [For clickup:]
   • pickle-clickup   (the ClickUp inbox-scan skill)
-  • pickle-mcp       (Pickle's own free ClickUp MCP server)
+  • pickle-mcp       (Pickle's own ClickUp MCP server — open source)
 
 [For slack:]
   • pickle-slack     (the Slack inbox-scan skill)
@@ -313,7 +313,7 @@ After fetch, confirm:
 
 ### For ClickUp
 
-Set `CLICKUP_AUTH = "pickle_mcp"` — Pickle always uses its own free MCP server. Your token, your machine, no third-party connector. Proceed directly to STEP 3.
+Set `CLICKUP_AUTH = "pickle_mcp"` — Pickle always uses its own MCP server (open source, runs locally). Your token, your machine, no third-party connector. Proceed directly to STEP 3.
 
 ### For Slack
 
@@ -323,9 +323,9 @@ Set `CLICKUP_AUTH = "pickle_mcp"` — Pickle always uses its own free MCP server
 
 ## STEP 3 — GUIDE THE AUTH
 
-### ClickUp — Pickle's own free MCP
+### ClickUp — Pickle's own MCP server
 
-This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/server.mjs` — free forever, open source, no license keys.
+This path uses Pickle's bundled MCP server at `~/.claude/pickle-mcp/clickup/server.mjs` — open source, runs locally. (Pickle itself is free during the public beta; paid plans launch later.)
 
 **Step A — Get the ClickUp API token.** Print:
 
@@ -786,8 +786,8 @@ Print a polished summary:
 - Never write to `~/.claude.json` without confirming with the user first
 - Never merge-overwrite existing MCP servers — preserve them
 - **Exactly ONE restart** — at Step 7, after ALL config is written. Never ask the user to restart mid-flow. If setup needs config changes, batch them all up front and restart once at the end.
-- **Keep it simple.** Pickle always uses its own bundled free MCP server — your token, your machine. Nothing else to consider.
-- Never guide the user to a paid upgrade to unlock features. If something requires paid ClickUp features, say so and offer a free workaround.
+- **Keep it simple.** Pickle always uses its own bundled MCP server (open source) — your token, your machine. Nothing else to consider.
+- Never block setup on payment. Pickle is free during the public beta; paid plans are introduced post-beta and never gate the install or core scan flow.
 - If user interrupts mid-setup, remember their progress and let them resume on next `/pickle-setup`
 - If anything fails, give a clear fix with a 1-line action — never a stack trace
 - Keep every section under ~12 lines of printed output — breathable, not a wall
