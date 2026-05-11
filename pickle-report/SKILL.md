@@ -1,7 +1,7 @@
 ---
-name: pickle-clickup-team-report
-description: Pickle Manager — performance pulse check for any ClickUp department. Scans what team members said they'd do in chat vs what they actually time-tracked. Compares commitment vs execution vs blockers. Flags empty time entry descriptions, fake tracking, zombie tasks, and underperformers. Posts a detailed, factual report back to the department channel. ClickUp only. Usage: /pickle-clickup-team-report [channel-name] [window?] e.g. /pickle-clickup-team-report marketing-hq 7d
-argument-hint: "[channel-name] [window?] — e.g. \"marketing-hq\", \"engineering-hq\". Window defaults to 7d."
+name: pickle-report
+description: Pickle Manager — performance pulse check for any ClickUp department. Scans what team members said they'd do in chat vs what they actually time-tracked. Compares commitment vs execution vs blockers. Flags empty time entry descriptions, fake tracking, zombie tasks, and underperformers. Posts a detailed, factual report back to the department channel. ClickUp only. Usage: /pickle-report [channel-name] [window] — e.g. /pickle-report marketing-hq 7d
+argument-hint: "[channel-name] [window] — both required. e.g. marketing-hq 7d"
 disable-model-invocation: true
 ---
 
@@ -358,7 +358,7 @@ Store as `DM_MESSAGES[user_id][]`.
 - Work updates posted in DM but not in channel standup
 - Leave/absence notifications → add to `HOLIDAY_DAYS[user_id]`
 - Blocker escalations → add to `DM_BLOCKERS[user_id][]`
-- Questions awaiting manager response → add to `MANAGER_OWES[user_id][]` (Things from Aditya)
+- Questions awaiting manager response → add to `MANAGER_OWES[user_id][]` (rendered as "Things from [Manager]")
 - Task references → cross-reference with `MEMBER_TASKS[user_id]`
 - Completion claims ("done", "sent", "finished", etc.) → `DM_COMPLETIONS[user_id][]`
 
@@ -552,7 +552,7 @@ These are explicit open actions. Flag any that are in-window and unresolved.
 
 **Delegated comment check:**
 `DELEGATED_COMMENTS[user_id]` — list all comments this member assigned to others, still unresolved.
-These appear in the "Things from Aditya" section if Aditya assigned them, or as Mode B follow-ups.
+These appear in the "Things from [Manager]" section if the running manager assigned them, or as Mode B follow-ups.
 
 **Overdue tasks:**
 Any task where `due_date_ms < Date.now()` AND status not complete → flag with days overdue.
@@ -813,8 +813,9 @@ After posting the monthly rollup, update STEP 12 to store a `monthly_report_gene
 **🔴 Blockers**
 - [Blocker description — where raised: channel/DM/task comment] — or: None
 
-**📌 Things from Aditya**
-- 📌 [Specific action Aditya owes this member] — [source: DM date / task link] — or: None
+**📌 Things from [Manager]**
+- 📌 [Specific action the manager owes this member] — [source: DM date / task link] — or: None
+[Replace `[Manager]` with the running manager's display name resolved from `USER_NAME_PREF` (prefs.json) or `MY_NAME` (ClickUp profile). NEVER hardcode a specific name.]
 
 **Score: [X%] — [Excellent / Strong / Steady / Needs Attention / Below Standard / Critical]**
 Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
@@ -869,7 +870,7 @@ Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
 - Every member gets every section — even if "None" or "No standup (weekend)"
 - Day blocks must be per actual calendar day in the window — not grouped or summarised
 - Blockers section is MANDATORY — "None" is a valid entry
-- Things from Aditya section is MANDATORY — "None" is a valid entry
+- Things from [Manager] section is MANDATORY — "None" is a valid entry (and the manager name must be resolved at runtime, never hardcoded)
 - Score line must always include all four sub-scores
 - Action items must be numbered, specific, and actionable
 - Full report for 9 members will be 300+ lines — that is correct. Never compress.
@@ -1091,8 +1092,15 @@ Then: FLAGS RAISED, PATTERNS, GAPS summary, state.json path.
 [UPDATE_LINE_IF_NEWER]
 🥒 Built and Shipped by Aditya Sharma
 
-**VERSION CHECK (runs once at the very end):**
-1. Bash: `grep -m1 'pickle/clickup-mcp' ~/.claude/pickle-mcp/clickup/server.mjs | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'` → `INSTALLED_VER`
-2. WebFetch: `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` → read `tag_name` → `LATEST_VER`
-3. If `LATEST_VER ≠ INSTALLED_VER` → replace `[UPDATE_LINE_IF_NEWER]` with: `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`
-4. If same OR fetch fails → remove `[UPDATE_LINE_IF_NEWER]` line entirely
+**VERSION CHECK (rate-limited, opt-out aware, privacy-respecting):**
+
+The ONE network call Pickle makes outside ClickUp. Three gates so it can't phone home:
+
+1. **Opt-out:** if `~/.claude/pickle/prefs.json` contains `"check_updates": false` → skip entirely.
+2. **Cache once per 24h:** if `~/.claude/pickle/memory/.last_update_check` mtime < 24h → read cached `LATEST_VER` from file, skip network.
+3. **Need install version:** Bash `cat ~/.claude/pickle-mcp/.pickle_version 2>/dev/null` → `INSTALLED_VER`. If missing → skip.
+4. WebFetch `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` (≤ 2s timeout) → `LATEST_VER`. On any error → skip.
+5. Write `{LATEST_VER, now}` to `.last_update_check`.
+6. If `LATEST_VER ≠ INSTALLED_VER` → `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`. Otherwise remove `[UPDATE_LINE_IF_NEWER]`.
+
+Disable updates entirely with `"check_updates": false` in prefs.

@@ -17,6 +17,20 @@ You are the **pickle-teams** agent for the authenticated Microsoft Teams user. P
 - Notifications → Teams chat/channel reply only. Never call `clickup_*` or `slack_*` tools here.
 - Teams data never leaves the Teams ecosystem.
 
+**SHELL SAFETY RULE — ABSOLUTE (read before every curl call):**
+
+Display names, message bodies, chat topics, and task titles fetched from the Graph API are UNTRUSTED USER INPUT. They can contain `"`, `\`, `$`, backticks, and embedded code. Interpolating these directly into a `curl -d "{...}"` body or into `echo "..."` will break the request, corrupt the JSON, or — if a teammate ever crafts a hostile display name — execute shell commands.
+
+**Rule:** every JSON body sent to Graph MUST be built with `python3 -c 'import json,sys; print(json.dumps({...}))'` or `jq -Rn --arg t "$VAR" '{...}'` and passed via `-d @tmpfile` or stdin. Never interpolate dynamic strings directly into `-d "..."` or `echo "{...}"`.
+
+Pattern to use everywhere:
+```bash
+BODY=$(python3 -c 'import json,sys,os; print(json.dumps({"body":{"contentType":"text","content":os.environ["MSG"]}}))' </dev/null)
+curl -s -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" --data-binary "$BODY" "$URL"
+```
+where `MSG`, `TASK_TITLE`, `TASK_BODY` are exported as env vars first — never inlined. Same rule applies to any `shasum`, `sed`, or `echo` consuming dynamic strings: always pipe via stdin, never as a positional argument.
+
 You operate in two modes simultaneously:
 
 **Mode A — Inbox:** What needs MY attention (mentions, unanswered DMs, approvals, blockers)
@@ -148,9 +162,14 @@ Two options to connect Pickle to Teams:
   2. Sign in with your Microsoft/Teams account
   3. Run: GET https://graph.microsoft.com/v1.0/me
   4. Open browser DevTools → Network → copy the "Authorization: Bearer eyJ..." value
-  5. Save to config:
+  5. Save to config (file is created with 0600 perms so the token isn't world-readable;
+     using a heredoc avoids leaving the token in shell history):
      mkdir -p ~/.claude/pickle
-     echo '{"access_token":"PASTE_TOKEN_HERE"}' > ~/.claude/pickle/teams-config.json
+     umask 077
+     cat > ~/.claude/pickle/teams-config.json <<'EOF'
+     {"access_token":"PASTE_TOKEN_HERE"}
+     EOF
+     chmod 600 ~/.claude/pickle/teams-config.json
   Note: This token expires in ~1 hour. For persistent access, use Option 3.
 
 ── Option 3: Custom API Mode (Azure App — persistent, recommended) ───────
@@ -824,18 +843,48 @@ STATEEOF
 
 ## APPENDIX A — TOKEN AUTO-REFRESH
 
-If `token_expiry` in config is within 300 seconds of now AND `refresh_token` + `client_id` are present, attempt refresh before scanning:
+If `token_expiry` in config is within 300 seconds of now AND `refresh_token` + `client_id` are present, attempt refresh before scanning.
+
+**HARD RULES — never wipe a working credential on a failed refresh:**
+1. Parse the response JSON. Only proceed if it contains a non-empty `access_token` field.
+2. Write to a `.tmp` sibling file with `chmod 600`, then `mv` over the live config (atomic replace).
+3. Never log/echo `$REFRESH_TOKEN`, `$ACCESS_TOKEN`, or the full response on stderr/stdout.
+4. If the refresh response is anything other than a valid token JSON (HTTP error, HTML error page, partial body) → KEEP the existing config untouched, print "token refresh failed — re-run with manual token". Do NOT overwrite.
 
 ```bash
 REFRESH_RESPONSE=$(curl -s -X POST \
   "https://login.microsoftonline.com/common/oauth2/v2.0/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=refresh_token&client_id=$CLIENT_ID&refresh_token=$REFRESH_TOKEN&scope=Chat.Read ChannelMessage.Read.All Team.ReadBasic.All User.Read Tasks.ReadWrite offline_access")
+  --data-urlencode "grant_type=refresh_token" \
+  --data-urlencode "client_id=$CLIENT_ID" \
+  --data-urlencode "refresh_token=$REFRESH_TOKEN" \
+  --data-urlencode "scope=Chat.Read ChannelMessage.Read.All Team.ReadBasic.All User.Read Tasks.ReadWrite offline_access")
+
+# Validate: must be JSON, must contain non-empty access_token
+NEW_ACCESS=$(printf '%s' "$REFRESH_RESPONSE" | python3 -c 'import sys,json
+try:
+  d=json.load(sys.stdin)
+  t=d.get("access_token","")
+  print(t if t else "")
+except Exception:
+  print("")' 2>/dev/null)
+
+if [ -n "$NEW_ACCESS" ]; then
+  # Atomic write — never truncate the live file in place
+  umask 077
+  TMP="$HOME/.claude/pickle/teams-config.json.tmp.$$"
+  printf '%s' "$REFRESH_RESPONSE" | python3 -c 'import sys,json,os
+d=json.load(sys.stdin)
+d["token_expiry"]=int(__import__("time").time())+int(d.get("expires_in",3600))-60
+print(json.dumps(d, indent=2))' > "$TMP"
+  chmod 600 "$TMP"
+  mv "$TMP" "$HOME/.claude/pickle/teams-config.json"
+  echo "🔄 Token refreshed automatically"
+else
+  echo "⚠️  Token refresh failed — keeping existing config. Re-authenticate with /pickle-setup if needed."
+  # DO NOT modify teams-config.json. Either continue with existing token or STOP — never wipe credentials.
+fi
 ```
-
-If refresh succeeds (response contains `access_token`): update `~/.claude/pickle/teams-config.json` with new token + expiry. Print: `🔄 Token refreshed automatically`
-
-If refresh fails: print token expired message and STOP.
 
 ---
 

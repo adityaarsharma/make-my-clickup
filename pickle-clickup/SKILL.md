@@ -80,20 +80,34 @@ curl -s -H "Authorization: TOKEN" "https://api.clickup.com/api/v2/team"
 ```
 Extract `teams[0].id` and `teams[0].name`.
 
-4. Write to `~/.claude.json` using python3:
+4. Write to `~/.claude.json` using python3 — ATOMIC write (never partial-write the user's MCP config, or every other server they have configured is lost):
 ```python
-import json, os
+import json, os, tempfile
 path = os.path.expanduser("~/.claude.json")
 try:
-    config = json.load(open(path))
-except:
+    with open(path) as f:
+        config = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
     config = {}
 config.setdefault("mcpServers", {})["clickup"] = {
     "command": "node",
     "args": [os.path.expanduser("~/.claude/pickle-mcp/clickup/server.mjs")],
     "env": {"CLICKUP_API_KEY": "TOKEN", "CLICKUP_TEAM_ID": "TEAM_ID"}
 }
-json.dump(config, open(path, "w"), indent=2)
+# Write to a sibling tmp file, fsync, then atomic rename — never truncate the live file
+dir_ = os.path.dirname(path) or "."
+fd, tmp = tempfile.mkstemp(prefix=".claude.json.", dir=dir_)
+try:
+    with os.fdopen(fd, "w") as f:
+        json.dump(config, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.chmod(tmp, 0o600)  # token lives here — keep it private
+    os.replace(tmp, path)
+except Exception:
+    try: os.unlink(tmp)
+    except: pass
+    raise
 ```
 
 5. Print:
@@ -568,7 +582,7 @@ Print per task:
 For each `task_id` in `ACTIVE_TASKS[]`, scan the `description` / `text_content` field for:
 
 1. **Direct @mention of me**: `@[MY_NAME]` or `@[MY_USER_ID]` anywhere in the text → `source_type: task_description` → Mode A candidate
-2. **Action verb addressed to me**: "Aditya please review", "check with Aditya", "waiting for Aditya" → Mode A candidate
+2. **Action verb addressed to me**: text matching `${MY_NAME} please [verb]`, `check with ${MY_NAME}`, `waiting for ${MY_NAME}`, `${MY_NAME} can you`, plus equivalents in Hindi/Hinglish/Gujarati (e.g. `${MY_NAME} dekh lo`, `${MY_NAME} ko bhej do`) → Mode A candidate. NEVER hardcode a specific name — always interpolate `$MY_NAME` from Step 1.
 3. **Outbound delegation I wrote**: If I created or last updated this task AND description contains "please do", "you handle", delegation language addressed to the assignee → Mode B candidate
 
 **When to include:**
@@ -1229,8 +1243,16 @@ Step B — Create new notification task:
 
 ---
 
-**VERSION CHECK (runs once at the very end, before printing final report):**
-1. Bash: `grep -m1 'pickle/clickup-mcp' ~/.claude/pickle-mcp/clickup/server.mjs | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'` → `INSTALLED_VER`
-2. WebFetch: `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` → read `tag_name` → `LATEST_VER`
-3. If `LATEST_VER ≠ INSTALLED_VER` → replace `[UPDATE_LINE_IF_NEWER]` with: `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`
-4. If same OR fetch fails → remove `[UPDATE_LINE_IF_NEWER]` line entirely (print nothing)
+**VERSION CHECK (rate-limited, opt-out aware, privacy-respecting):**
+
+This is the ONLY network call Pickle makes outside the user's chosen ecosystems. It's gated three ways so it can't become a phone-home vector:
+
+1. **Honor opt-out.** Bash: `cat ~/.claude/pickle/prefs.json 2>/dev/null | grep -q '"check_updates": false'` — if found, SKIP the entire version-check block.
+2. **Rate-limit to once per 24h on disk.** Check `~/.claude/pickle/memory/.last_update_check` mtime. If newer than 24h, READ the cached result from that file and skip the network call. If older or missing, proceed.
+3. **Source of truth: pickle_version file.** Bash: `cat ~/.claude/pickle-mcp/.pickle_version 2>/dev/null` → `INSTALLED_VER`. If missing → skip silently (cannot compare).
+4. WebFetch: `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` → read `tag_name` → `LATEST_VER`. On any error/timeout (≤2s) → skip.
+5. Write `LATEST_VER` + `now` to `~/.claude/pickle/memory/.last_update_check` so the next run uses cache.
+6. If `LATEST_VER ≠ INSTALLED_VER` → replace `[UPDATE_LINE_IF_NEWER]` with: `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`
+7. If same OR skipped → remove `[UPDATE_LINE_IF_NEWER]` line entirely (print nothing).
+
+Users can disable update checks entirely by adding `"check_updates": false` to `~/.claude/pickle/prefs.json`. The network call is to api.github.com only — no IPs, query strings, or telemetry payloads.

@@ -136,7 +136,7 @@ Read `~/.claude/skills/pickle-slack/state.json`. Look for `_list_registry["Task 
 }
 ```
 
-Also check legacy keys `"Pickle Inbox"`, `"Aditya's Task Board — Made from Pickle"`, `"My Task Board — Made from Pickle"`, `"Pickle Task Board"` — if found under any of those, treat as a match and migrate the cache key to `"Task Board - By Pickle"` going forward.
+Also check legacy keys `"Pickle Inbox"`, `"My Task Board — Made from Pickle"`, `"Pickle Task Board"`, plus any list named `"${USER_NAME}'s Task Board — Made from Pickle"` — if found under any of those, treat as a match and migrate the cache key to `"Task Board - By Pickle"` going forward.
 
 - **If found**: store `LIST_ID` and `COL_IDS` from cache. Call `slack_list_find_or_create` with `cached_list_id` + `cached_col_ids` — returns immediately, zero API calls. ✅
 - **If not found** (first ever run): call `slack_list_find_or_create` with `name: "Task Board - By Pickle"`, `is_private: true` — creates the list as **private** (only you can see it), returns `list_id` + `col_ids`. Save both to `_list_registry["Task Board - By Pickle"]` in state.json before proceeding. ✅
@@ -714,7 +714,7 @@ quote:       "[Full ClickUp-style context block — see format below, max 2000 c
 From: @[sender] in #[channel] · [date]
 Message: "[verbatim or near-verbatim excerpt — the actual thing they said]"
 Context: [1-2 sentences of background — what project/client/decision this relates to, why it matters]
-Action needed: [exactly what Aditya needs to do — be specific, not "review this"]
+Action needed: [exactly what the running user needs to do — be specific, not "review this". Resolve user identity at runtime; never hardcode a name.]
 ```
 Example:
 ```
@@ -856,11 +856,18 @@ If zero items: text = `🥒 Pickle Slack · All clear in [TIME_LABEL] — nothin
 
 ---
 
-**VERSION CHECK (runs once at the very end, before printing final report):**
-1. Bash: `grep -m1 'pickle/slack-mcp' ~/.claude/pickle-mcp/slack/server.mjs | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+'` → `INSTALLED_VER`
-2. WebFetch: `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` → read `tag_name` → `LATEST_VER`
-3. If `LATEST_VER ≠ INSTALLED_VER` → replace `[UPDATE_LINE_IF_NEWER]` with: `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`
-4. If same OR fetch fails → remove `[UPDATE_LINE_IF_NEWER]` line entirely (print nothing)
+**VERSION CHECK (rate-limited, opt-out aware, privacy-respecting):**
+
+The ONE network call Pickle makes outside Slack. Three gates so it can't phone home:
+
+1. **Opt-out:** if `~/.claude/pickle/prefs.json` contains `"check_updates": false` → skip entirely.
+2. **Cache once per 24h:** if `~/.claude/pickle/memory/.last_update_check` mtime < 24h → read cached `LATEST_VER` from file, skip network.
+3. **Need install version:** Bash `cat ~/.claude/pickle-mcp/.pickle_version 2>/dev/null` → `INSTALLED_VER`. If missing → skip (slack uses third-party `slack-mcp-server`, never grep its source).
+4. WebFetch `https://api.github.com/repos/adityaarsharma/pickle/releases/latest` (≤ 2s timeout) → `LATEST_VER`. On any error → skip.
+5. Write `{LATEST_VER, now}` to `.last_update_check`.
+6. If `LATEST_VER ≠ INSTALLED_VER` → `🔄 Update available: $INSTALLED_VER → $LATEST_VER · run: bash ~/.claude/pickle-mcp/update.sh`. Otherwise remove `[UPDATE_LINE_IF_NEWER]`.
+
+Disable updates entirely with `"check_updates": false` in prefs.
 
 ---
 

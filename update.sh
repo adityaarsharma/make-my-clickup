@@ -168,9 +168,10 @@ echo "$LATEST_TAG" > "$VERSION_FILE"
 # ── Remove deprecated / post-setup tools ───────────────────────
 # pickle-setup: onboarding wizard, self-deletes after setup. If still
 # present (interrupted setup or old install), remove it now.
-# pickle-me / pickle-report: retired skills.
+# pickle-me: retired skill.
+# NOTE: pickle-report is NOT deprecated — managers depend on it.
 CLEANUP_DONE=0
-for deprecated in pickle-setup pickle-me pickle-report; do
+for deprecated in pickle-setup pickle-me; do
   if [ -d "$SKILLS_DIR/$deprecated" ]; then
     rm -rf "$SKILLS_DIR/$deprecated"
     CLEANUP_DONE=1

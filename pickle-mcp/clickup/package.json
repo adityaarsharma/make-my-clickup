@@ -1,6 +1,6 @@
 {
   "name": "@pickle/clickup-mcp",
-  "version": "1.0.0",
+  "version": "2.9.1",
   "description": "Free, open-source ClickUp MCP server for the Pickle project. Pure Node.js, no build step.",
   "type": "module",
   "main": "server.mjs",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @pickle/clickup-mcp  v2.4.1
+ * @pickle/clickup-mcp  v2.9.1
  *
  * Free, open-source ClickUp MCP server — part of the Pickle project.
  * Pure Node.js ESM · no build step · no TypeScript compilation.
@@ -1236,7 +1236,7 @@ function isOptional(schema) {
 // ---------------------------------------------------------------------------
 
 const server = new Server(
-  { name: "pickle-clickup-mcp", version: "2.4.0" },
+  { name: "pickle-clickup-mcp", version: "2.9.1" },
   { capabilities: { tools: {} } }
 );
 
