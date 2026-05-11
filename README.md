@@ -27,16 +27,37 @@ No other tool compares what your team **said** they'd do against what the **task
 
 ---
 
-## What Pickle catches automatically
+## 13 patterns Pickle catches that no native tool surfaces
 
-- **Said vs done gap** — standup claimed "done", task still open, no delivery comment → flagged
-- **Zombie tasks** — assigned, "in progress" for 30+ days, no activity → named and escalated
-- **Empty hours** — time logged with no description → "Xh tracked, zero context"
-- **Standup copy-paste** — same update 3 days running → flagged as no real update
-- **Expired promises** — "will finish by Friday" → it's Tuesday → still open → flagged
-- **Blocker age** — blocker raised 14 days ago, never cleared → escalated with day count
-- **Effort-output mismatch** — 40h logged, still open, no comments → "what is the current state?"
-- **Manager-side blockers** — Pickle tracks when *you* are the bottleneck, not just your team
+Every pattern below is something Pickle detects automatically across ClickUp, Slack, and Teams. Each is a real failure mode that looks fine on the dashboard but isn't.
+
+| # | Pattern | What goes wrong | What Pickle does |
+|---|---|---|---|
+| 1 | **Empty hours** | 40h logged on a task, description blank, zero context | Flags hours + task — "what did those hours buy?" |
+| 2 | **Stale "in progress"** | "In progress" for 6 weeks, no comment in 3 | Names the task with days-since-last-update |
+| 3 | **Zombie tasks** | Assigned 30+ days, never mentioned in standup or DM | Surfaces with link, age, hours, comment count |
+| 4 | **Standup copy-paste** | Same standup text 3+ days running = no real update | Detects similarity, marks those days zero-evidence |
+| 5 | **Expired promises** | "By Friday" said Monday → Tuesday now → still open | Tracks temporal commits, flags by exact quote |
+| 6 | **Blocker age** | Blocker raised 14 days ago, nobody cleared it | Days-unresolved on every blocker, auto-🔴 at 14d |
+| 7 | **Effort-output mismatch** | 40h+ logged + still open + no comments in window | Critical flag with hours + comment count cited |
+| 8 | **Ghost mode** | Silent in channels for 40%+ of the window | Flags presence gap + checks if DM-active |
+| 9 | **DM-only completion** | "Done" claimed in DM, task card never updated | Partial credit + card hygiene flag |
+| 10 | **Description quality** | "8h development" tells nothing about what shipped | Scores description quality, not just hours |
+| 11 | **Manager-side blocker** | YOU are the bottleneck on someone's work | Tracks tasks awaiting you, flags age |
+| 12 | **Cross-team handoff in DM** | Decision made in group DM never reaches the card | Scans group DMs, links to relevant task |
+| 13 | **Recurring zombie** | Same task stale across 3+ reports = task graveyard | "Recurring zombie" pattern with first-flag date |
+
+---
+
+## 5 use cases Pickle is built for
+
+| Use case | Replaces | One command |
+|---|---|---|
+| **Weekly team pulse** | 45-min Monday status meeting | `/pickle-report marketing-hq 7d` |
+| **Performance review prep** | 3 hours digging through history | Velocity trend + flag history pre-rendered |
+| **Returning from vacation** ★ | Wall of 200+ unread messages | `/pickle-clickup 7d` → ranked 7 items |
+| **Auto-escalation** | Manual pattern matching across weeks | Pickle flags 3+ declining reports automatically |
+| **Monthly rollup** | Re-scanning a month of ClickUp data | `/pickle-report channel 1m` synthesises from memory |
 
 ---
 
@@ -77,6 +98,71 @@ Scans your team's standups, DMs, task cards, time entries, and comments in Click
 - Blocker age — how many days unresolved, auto-escalates at 14 days
 - Escalation watch — 3+ declining reports or same unresolved flag 4+ weeks
 - Private manager section — what *you* need to unblock
+
+---
+
+## Why Pickle vs each platform's native AI
+
+Every ecosystem now has its own AI: ClickUp Brain inside ClickUp, Slack AI inside Slack, Microsoft Copilot inside Teams. Each does one thing well — **summarise what's inside that one tool**. None of them can read across the others. None compare what your team said in chat against what the tasks actually show.
+
+That cross-tool synthesis is the entire point of Pickle.
+
+### Pickle ClickUp vs ClickUp Brain
+
+| Capability | ClickUp Brain | Pickle |
+|---|---|---|
+| Writes / summarises tasks inside ClickUp | ✅ | — |
+| Generates task descriptions for you | ✅ | — |
+| **Reads your Slack messages** | ❌ | ✅ |
+| **Reads your Microsoft Teams messages** | ❌ | ✅ |
+| **Compares "said in standup" vs "what the task shows"** | ❌ | ✅ |
+| Flags empty time entry descriptions | ❌ | ✅ |
+| Tracks blocker age across reports | ❌ | ✅ |
+| Detects copy-paste standups | ❌ | ✅ |
+| Tracks expired promises ("by Friday") | ❌ | ✅ |
+| Tracks tasks where YOU are the blocker | ❌ | ✅ |
+| Per-person weekly performance report | ❌ | ✅ |
+| Runs on your machine | ❌ (cloud-only) | ✅ |
+
+**Where ClickUp Brain falls short:** it can write you a task description. It cannot see that your teammate said "done" in Slack 4 hours before logging 6 more hours on the same task with no comments. Pickle reads both surfaces — Brain only reads ClickUp.
+
+### Pickle Slack vs Slack AI
+
+| Capability | Slack AI | Pickle |
+|---|---|---|
+| Summarises a thread or channel | ✅ | ✅ |
+| Daily recap of channels | ✅ | ✅ |
+| **Reads your ClickUp tasks** | ❌ | ✅ |
+| **Reads your Microsoft Teams chats** | ❌ | ✅ |
+| Tracks what YOU delegated to others (Mode B) | ❌ | ✅ |
+| Auto-drafts follow-ups with your approval | ❌ | ✅ |
+| Treats unanswered DMs as inbox items | ❌ | ✅ |
+| Compares "said" to "done" | ❌ | ✅ |
+| Runs on your machine | ❌ (cloud-only) | ✅ |
+
+**Where Slack AI falls short:** it summarises a thread that says "I'll merge the PR today." It cannot check whether the PR was actually merged in your ClickUp workspace. Pickle reads both.
+
+### Pickle Teams vs Microsoft Copilot for Teams
+
+| Capability | Copilot for Teams | Pickle |
+|---|---|---|
+| Summarises a meeting | ✅ | meeting action items only |
+| Drafts replies in Teams | ✅ | — |
+| Reads Planner tasks assigned to you | ✅ | ✅ |
+| **Reads your ClickUp tasks** | ❌ | ✅ |
+| **Reads your Slack messages** | ❌ | ✅ |
+| Tracks delegated work as Mode B follow-ups | ❌ | ✅ |
+| Tracks blocker age across weeks | ❌ | ✅ |
+| Generates cross-platform team performance reports | ❌ | ✅ |
+| Detects Approvals app messages as inbox items | partial | ✅ |
+| Runs on your machine | ❌ (cloud) | ✅ |
+
+**Where Copilot for Teams falls short:** it pulls a meeting action item like "the report ships by Friday." It cannot follow up on Friday to check whether the report actually shipped in your ClickUp workspace. Pickle does that automatically.
+
+### The one-line summary
+
+> ClickUp Brain reads tasks. Slack AI reads messages. Copilot reads Microsoft.
+> Pickle reads **all three** and tells you whether what was said matches what got done.
 
 ---
 
