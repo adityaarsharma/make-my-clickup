@@ -79,16 +79,41 @@ Print: `📊 pickle-report · #[CHANNEL_NAME] · [WINDOW_LABEL]`
 
 ---
 
-## STEP 0.5 — LOAD LOCAL STATE
+## STEP 0.5 — LOAD LOCAL STATE + MEMORY-FIRST SETUP
 
 Read `~/.claude/skills/pickle-report/state.json`.
 - `TEAM_STATE` = `state.teams[CHANNEL_NAME]` (undefined on first run)
 - `GLOBAL_SETTINGS` → thresholds
 
-**Also read report memory:**
+**Read report memory:**
 Read `~/.claude/pickle/memory/report-memory.json` (may not exist on first run).
-- `REPORT_MEMORY[CHANNEL_NAME]` → per-member behavioural patterns, known zombies, flag history
-- If missing → first run, all patterns baseline
+- `REPORT_MEMORY[CHANNEL_NAME]` → per-member scores, flags, zombies, patterns
+- If missing → first run, baseline everything
+
+**Extract from memory — use this data directly, never re-fetch what's already stored:**
+```
+For each member in REPORT_MEMORY[CHANNEL_NAME]:
+  SCORE_HISTORY[uid]   = member.score_history[]      ← for velocity trend
+  FLAG_HISTORY[uid]    = member.flag_history[]        ← for escalation detection
+  KNOWN_ZOMBIES[uid]   = member.known_zombie_ids[]    ← pre-flag without API call
+  MEMBER_NOTES[uid]    = member.notes                 ← carry forward context
+```
+
+**Known zombies shortcut:** Any task ID in `KNOWN_ZOMBIES[uid]` that appears in the current task list → immediately flag as "recurring zombie (first flagged [date])" without calling `clickup_get_task` if it was fetched in the last 24h.
+
+**Monthly rollup mode (WINDOW_DAYS = 30 AND ≥ 4 entries in score_history):**
+```
+If WINDOW_DAYS == 30:
+  For each member, count score_history entries:
+    If entries >= 4 → MONTHLY_ROLLUP_AVAILABLE = true
+
+If MONTHLY_ROLLUP_AVAILABLE = true:
+  → Ask: "4+ weekly reports in memory — run a monthly rollup from stored data (no ClickUp scan needed)?
+    Reply 'rollup' for memory-based monthly summary, or 'scan' to do a full 30-day ClickUp scan."
+
+  If 'rollup' → MONTHLY_ROLLUP_MODE = true. Skip Steps 1–9. Jump directly to STEP 10 MONTHLY ROLLUP.
+  If 'scan'   → MONTHLY_ROLLUP_MODE = false. Continue normal flow.
+```
 
 ---
 
@@ -627,18 +652,104 @@ Load `TEAM_STATE.members[uid].reports[]` (previous runs).
 Detect if same flag appears ≥ 2 consecutive reports → PATTERN.
 Patterns get stronger language in the report + direct flag to manager.
 
-**Patterns to detect:**
+**Existing patterns to detect:**
 - Empty task description recurring across runs → "chronic card hygiene issue"
 - DM-only reporting (never updates the card) → "works in DMs, cards dark"
 - Standup but no time tracking → "commitment culture, no evidence culture"
 - Time tracked but zero session descriptions → "tracking hours, not effort"
 - Recurring zombies (same task stale across reports) → "task graveyard"
 
+**NEW: Standup copy-paste detection**
+Compare `CHANNEL_MESSAGES[uid]` standup text across consecutive days in the window.
+- If any 3+ consecutive days have standup text that is identical OR differs by fewer than 10 words → `STANDUP_COPYPASTE = true`
+- Flag: "Standup copy-pasted from [first date] — no actual update for [N] consecutive days"
+- Treat as zero-evidence days for those sessions (don't credit as presence)
+
+**NEW: Promise expiry tracking**
+Scan all standup + DM messages for temporal commitments. Detect phrases:
+`"by EOD", "by end of day", "by Friday", "by tomorrow", "today", "will finish", "by [weekday]", "will send by", "ho jayega by"`
+For each match:
+1. Extract the referenced deadline (parse day/date relative to message timestamp)
+2. Check if deadline_ms < now (expired)
+3. Check if the referenced task is closed
+4. If deadline passed AND task still open → `EXPIRED_PROMISES[uid].push({ quote, date, task_name, task_id })`
+Flag per expired promise: `Committed "[quote]" on [date] — deadline passed, [task_name] still open`
+
+**NEW: Blocker age counter**
+For each active blocker in the member's `FLAG_HISTORY` (from report-memory) and current `CHANNEL_MESSAGES + DM_MESSAGES`:
+- Calculate `days_unresolved = today - first_flag_date`
+- Attach age to every blocker flag in the report: "Blocker: [text] — [N] days unresolved (first raised [date])"
+- If `days_unresolved >= 14` → escalate to `🔴` regardless of other scores
+- If `days_unresolved >= 7` → `🟠` flag in private manager section
+
+**NEW: Effort-output mismatch**
+For each task in `MEMBER_TASKS[uid]`:
+- If `time_spent_ms > 72_000_000` (20h+) AND status NOT closed AND in-window comments < 2:
+  → Flag (🟠): "[task name] — [Xh] logged, still open, only [N] comment(s) in window — needs a status update"
+- If `time_spent_ms > 144_000_000` (40h+) AND status NOT closed AND description empty:
+  → Flag (🔴): "[task name] — [Xh] logged, still open, description empty — what is the current state?"
+- Note: do not double-flag if the task is already in KNOWN_ZOMBIES
+
+**NEW: Team velocity calculation (outputs to STEP 10 Team Summary)**
+For each member, compute velocity from `SCORE_HISTORY[uid]` (last 4 entries max):
+```
+last_score   = score_history[-1].score
+prev_score   = score_history[-2].score  (or null)
+delta        = last_score - prev_score
+4_report_avg = average of last 4 scores
+
+trend_arrow:
+  delta >= +0.05 → ↑↑   (strong rise)
+  delta >= +0.02 → ↑    (rising)
+  delta >= -0.01 → →    (flat)
+  delta >= -0.04 → ↓    (declining)
+  delta <  -0.04 → ↓↓   (sharp drop)
+
+VELOCITY[uid] = { delta, trend_arrow, 4_report_avg, score_history_last4 }
+```
+Store `VELOCITY[]` for use in STEP 10 Team Summary.
+
 ---
 
 ## STEP 10 — BUILD REPORT
 
-### Channel message format
+### MONTHLY ROLLUP MODE (only if MONTHLY_ROLLUP_MODE = true from STEP 0.5)
+
+**Skip all per-day activity blocks. Render a monthly synthesis from stored report-memory only. No ClickUp API calls needed.**
+
+```
+---
+
+## 📅 MONTHLY REPORT — [MONTH] — #[CHANNEL_NAME]
+[Generated from [N] weekly reports: [date1], [date2], [date3], [date4]]
+
+**📈 Score Trajectory**
+| Member | Wk 1 | Wk 2 | Wk 3 | Wk 4 | Month Avg | Trend |
+|---|---|---|---|---|---|---|
+| [Name] | [X%] | [X%] | [X%] | [X%] | [X%] | ↑↑/↑/→/↓/↓↓ |
+
+**🏆 Top Performers This Month**
+[Top 2-3 members with highest avg + rising/flat trend — cite what made them stand out from notes]
+
+**⚠️ Needs Attention**
+[Members with declining trend or recurring flags — cite specific unresolved patterns from flag_history]
+
+**✅ Flags Resolved This Month**
+[Flags that appeared in early reports and were cleared by final report — list member + what was resolved]
+
+**🔴 Unresolved Flags Carried Into Next Month**
+[Flags that appeared in 3+ reports and are still active — list member + flag + report count]
+
+**📌 [Manager Name] — Monthly Actions**
+1. [Action based on pattern across all 4 reports]
+2. [...]
+```
+
+After posting the monthly rollup, update STEP 12 to store a `monthly_report_generated: [date]` entry in report-memory. Then END — do not run the weekly format.
+
+---
+
+### Weekly Channel message format
 
 **No overall header. No /pickle-report footer. Start directly with team performance blocks.**
 
@@ -721,6 +832,19 @@ Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
 
 ## 🏁 TEAM SUMMARY — [DATE RANGE]
 
+**📈 Team Velocity — Last 4 Reports**
+| Member | R-3 | R-2 | R-1 | This week | Trend |
+|---|---|---|---|---|---|
+| [Name] | [X%] | [X%] | [X%] | [X%] | ↑↑/↑/→/↓/↓↓ |
+[All members. Pull from SCORE_HISTORY last 4 entries. Show "—" if fewer than 4 reports exist.]
+[Order: declining members first (needs attention), then flat, then rising]
+[Trend legend: ↑↑ +5%+ | ↑ +2–4% | → ±1% | ↓ -2–4% | ↓↓ -5%+]
+
+**⚠️ Escalation Watch**
+[For any member with: 3+ consecutive declining reports, OR 4+ reports with the same unresolved flag, OR blocker age ≥ 14 days — state: name, pattern, and exact action required.]
+[If none: "No escalations this report."]
+
+**📊 This Week's Score Card**
 | Member | Score | Trend | Flag |
 |---|---|---|---|
 | [Name] | [X%] | ↑/→/↓/↑↑ | [One-line flag or None] |
@@ -735,6 +859,10 @@ Delivery: [X%] | Time Docs: [X%] | Card Updates: [X%] | Presence: [X%]
 
 **📈 Most Improved** (only if applicable)
 [Member name] — [specific reason]
+
+**🔁 Unresolved from Last Report**
+[List any flag from previous report that appeared again this week — name, flag, report count]
+[If none: "All previous flags cleared or new this week."]
 ```
 
 **FORMAT RULES — NON-NEGOTIABLE:**

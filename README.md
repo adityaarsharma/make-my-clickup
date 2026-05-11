@@ -1,192 +1,103 @@
 # 🥒 Pickle
 
-> **In a pickle? Pickle sorts it.**
->
-> Every morning, 200+ messages across ClickUp and Slack. Half are noise. A few are decisions waiting on you. Pickle reads everything, keeps the few that matter, and drops them in your personal task board — ranked by what YOU actually do.
+> **ClickUp Brain shows your tasks. Slack AI shows your messages. Pickle shows if they match.**
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Free forever. **v2.7.9**
+Built by [Aditya Sharma](https://adityaarsharma.com). MIT licensed. **Runs 100% on your machine.**
 
 ---
 
-## The problem
+## The problem Pickle solves
 
-You wake up. Open ClickUp. Open Slack. 47 unread threads. You scan, skim, miss the one DM where a teammate's been waiting 2 days for your approval. By 11am, someone pings: *"any update on the thing I sent Monday?"*
+Your team logs 40 hours on a task. The status still says "in progress." The description is blank. The last comment was three weeks ago.
 
-The problem isn't you. Your attention is spread across channels, DMs, task comments, and threaded replies — and no single view tells you *"here's what needs you right now."*
+Your standup says "wrapping it up." Pickle says: *there is no evidence of that.*
 
-## What Pickle does
-
-**Mode A — Inbox** 📥 — Every message that needs your action:
-- DMs and group DMs you're in (questions, approvals, decisions)
-- Channel messages where you're @mentioned
-- Task comments on tasks you own or watch
-- Docs where someone tagged you
-- Reminders others set for you
-
-**Mode B — Follow-up Tracker** 🔁 — Every thread where someone owes YOU something:
-- You asked → they said "will do" → 3 days of silence
-- You asked for a file → they replied "sure" but never sent it
-- You set a recurring ask → updates stopped after Tuesday
-
-Pickle creates prioritised tasks in your private "Task Board - By Pickle", ranked by urgency and by what your role actually cares about. You go from 47 threads to 7 tasks.
-
-## What makes Pickle different
-
-### 🎯 Scored by YOUR role, not a generic rule
-Pickle asks your role and one line about what you do day-to-day on first run. A manager sees approvals and blockers ranked higher; a team member sees their assigned tasks and pending replies. Role only reorders — it never filters anything out.
-
-### 📬 Catches DMs that others miss
-In a private DM or group DM that includes you, every unanswered question is yours — even if it's technically addressed to someone else in the thread. That's how work actually flows. Pickle knows this.
-
-### 🌐 Reads intent, not just keywords
-Teams write in whatever language is natural — and Pickle reads the *meaning*, not the exact phrase. "Can you confirm?", "please approve", and any local-language equivalent all register the same way.
-
-### 🔔 Notifies you the moment a scan finishes
-Each skill fires its own notification when done — ClickUp skills create a deadline task in your board, Slack skill sends a Slackbot reminder. No Business plan required. Nothing sent to any group or channel.
-
-### 🚫 Never auto-sends
-Every follow-up message is drafted, shown to you, and only sent after you say so. If you've already nudged someone twice, Pickle refuses to send a third — it suggests you talk to them directly.
-
-### 🔒 Runs on your machine
-No Pickle server exists. Your chat data never leaves your laptop.
-
-### 💰 Free forever
-Both supported paths are 100% free. No trial, no paid tier, no credit card.
+No other tool compares what your team **said** they'd do against what the **tasks actually show**. ClickUp Brain summarises tasks. Slack AI summarises threads. Neither checks if the two match. Pickle does.
 
 ---
 
-## Two versions of Pickle
+## What Pickle catches automatically
 
-### 🧑‍💼 Pickle Manager
-For team leads and managers.
+- **Said vs done gap** — standup claimed "done", task still open, no delivery comment → flagged
+- **Zombie tasks** — assigned, "in progress" for 30+ days, no activity → named and escalated
+- **Empty hours** — time logged with no description → "Xh tracked, zero context"
+- **Standup copy-paste** — same update 3 days running → flagged as no real update
+- **Expired promises** — "will finish by Friday" → it's Tuesday → still open → flagged
+- **Blocker age** — blocker raised 14 days ago, never cleared → escalated with day count
+- **Effort-output mismatch** — 40h logged, still open, no comments → "what is the current state?"
+- **Manager-side blockers** — Pickle tracks when *you* are the bottleneck, not just your team
 
-| Command | What it does | Notification |
-|---------|-------------|-------------|
-| `/pickle-clickup [window]` | ClickUp inbox — what needs your action | ClickUp 🔔 task |
-| `/pickle-slack [window]` | Slack inbox — same, from Slack | Slackbot reminder |
-| `/pickle-clickup-team-report [channel] [window]` | Team performance pulse — commitment vs execution | ClickUp 🔔 task |
-| `/pickle-update` | Update Pickle to the latest version | — |
+---
 
-### 👤 Pickle Team Member
-For individual contributors.
+## Two tools in one
 
-| Command | What it does | Notification |
-|---------|-------------|-------------|
-| `/pickle-clickup [window]` | ClickUp inbox — what needs your action | ClickUp 🔔 task |
-| `/pickle-slack [window]` | Slack inbox — if your team uses Slack | Slackbot reminder |
-| `/pickle-update` | Update Pickle to the latest version | — |
+### 👤 For you — `/pickle-clickup` and `/pickle-slack`
 
-**The only difference:** Managers get `/pickle-clickup-team-report`. Team members don't.
+Reads every surface where work decisions happen — DMs, channels, task comments, threaded replies, assigned comments, reminders — and gives you a ranked inbox of what needs your attention right now.
 
-Both versions use the same private "Task Board - By Pickle". Each ecosystem stays completely isolated — ClickUp data never crosses into Slack and vice versa.
+```
+/pickle-clickup 24h          # everything in ClickUp that needs you
+/pickle-clickup 7d followup  # last week + draft follow-ups
+/pickle-slack 24h            # same for Slack
+```
+
+### 🧑‍💼 For managers — `/pickle-report`
+
+Scans your team's standups, DMs, task cards, time entries, and comments. Compares commitment to evidence. Posts a full per-person report to the team channel with scores, patterns, action items, and private escalation flags.
+
+```
+/pickle-report marketing-hq 7d     # weekly team pulse
+/pickle-report engineering-hq 14d  # two-week view
+/pickle-report design-hq 1m        # monthly rollup from stored reports
+```
+
+**What the report covers per person:**
+- Per-day activity breakdown (every standup, DM, task event)
+- Verified Output — every task touched, with evidence source
+- Truly Done Check — status closed + description + time tracked (all three required)
+- Score: Delivery % | Time Docs % | Card Updates % | Presence %
+- Team velocity trend across last 4 reports (↑↑ ↑ → ↓ ↓↓)
+- Escalation watch — recurring flags, blocker age, expired commitments
+- Private manager section — what *you* need to unblock
 
 ---
 
 ## Install
 
-Open Claude Code and paste the relevant message into chat — Claude runs the install for you.
+Open Claude Code. Paste this message into chat:
 
-### 🧑‍💼 For managers and team leads
-
+**For managers:**
 ```
 Install Pickle (manager version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
 ```
 
-### 👤 For team members
-
+**For team members:**
 ```
 Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
 ```
 
-Claude will show a summary of what the script does — click **Yes** to confirm. The guided setup (`/pickle-setup`) runs automatically after install and walks you through everything: name, role, ClickUp or Slack or both, connection method. Takes about 2 minutes.
+After install, `/pickle-setup` runs automatically. Takes 2 minutes. Asks your name, role, and ClickUp API token — then you're live.
 
-Quit Claude Code fully (**Cmd+Q**) and reopen when done.
-
-> **Repo:** [github.com/adityaarsharma/pickle](https://github.com/adityaarsharma/pickle)
+**Requires:** Node.js LTS ([nodejs.org](https://nodejs.org))
 
 ---
 
-## Daily usage
+## Connect ClickUp — 30 seconds
 
-**For managers:**
-```
-/pickle-clickup            # scan ClickUp last 24 hours
-/pickle-clickup 7d         # last week
-/pickle-clickup 24h followup   # scan + draft follow-up reminders
+Pickle uses its own free MCP server. No third-party connector needed. Your token stays on your machine.
 
-/pickle-slack              # same for Slack
-/pickle-slack 7d
+1. Open [app.clickup.com](https://app.clickup.com) → avatar → Settings → Integrations & ClickApps → ClickUp API
+2. Click **Generate** → copy the `pk_…` token
+3. Paste it when `/pickle-setup` asks
+4. Quit Claude Code (Cmd+Q) and reopen — done
 
-/pickle-clickup-team-report marketing-hq        # team pulse
-/pickle-clickup-team-report engineering-hq 14d  # two-week view
-```
+Token is stored in `~/.claude.json` on your machine. Never uploaded anywhere.
 
-**For team members:**
-```
-/pickle-clickup        # scan ClickUp inbox
-/pickle-clickup 7d     # past week
+## Connect Slack — 2 minutes
 
-/pickle-slack          # scan Slack inbox (if installed)
-```
+Pickle reads Slack via your own user token — not a shared app, not a connector. Full DM and channel access.
 
-ClickUp data and Slack data stay completely separate — never mixed.
-
----
-
-## Pickle Manager — Team Performance Reports
-
-```
-/pickle-clickup-team-report marketing-hq        # weekly report for the marketing team
-/pickle-clickup-team-report engineering-hq 14d  # 2-week view for engineering
-/pickle-clickup-team-report design-hq 7d        # design team pulse
-```
-
-Pickle Manager scans what your team said they'd do (ClickUp chat) vs what they actually tracked (task cards, time logs, comments). Per person: delivery rate, time efficiency, update compliance, channel presence. Posts a smart, non-offensive report back to the department channel. Flags underperformers to you directly.
-
-**What it analyses:**
-- 📋 Commitments made in chat → matched to real task completion
-- 🕐 Time tracked vs estimated (per-task efficiency)
-- 🧟 Zombie tasks — assigned but untouched for 5+ days
-- 💬 Task documentation quality (descriptions, progress comments)
-- 👻 Ghost mode — team members silent for 40%+ of the window
-- 📉 Trends over time — is someone consistently slipping, or improving?
-
-**Truly Done standard:** A task only counts as complete when ALL THREE are true — status closed + description filled + time tracked.
-
-> **Scope:** ClickUp only. Requires ClickUp MCP connected.
-
----
-
-## Update
-
-```
-/pickle-update
-```
-
-Auto-detects what you have, pulls the latest, tells you to Cmd+Q and reopen Claude Code. Your tokens, role, and task history stay untouched.
-
----
-
-## How Pickle connects to ClickUp / Slack
-
-### 🔵 ClickUp
-
-| Path | Best for | Setup |
-|------|---------|-------|
-| **Official Claude Connector** (recommended) | Personal Claude accounts | claude.ai → Settings → Connectors → ClickUp → Connect. 2 clicks. |
-| **Pickle's own MCP** (personal token) | Shared Claude accounts | Paste your ClickUp API token during setup. Runs locally, free. |
-
-**Getting your ClickUp API token:**
-1. Open [app.clickup.com](https://app.clickup.com) → click your avatar → Settings
-2. Left sidebar → **Integrations & ClickApps** → **ClickUp API**
-3. Click **Generate** → copy the `pk_…` token
-4. Paste it when `/pickle-setup` asks. Stays in `~/.claude.json` — never uploaded.
-
-### 💬 Slack
-
-Connect via claude.ai → Settings → Connectors → Slack → Connect. 2 clicks, free.
-
-If you're on a shared Claude account or a locked workspace and need a personal token path, see the [advanced Slack setup](https://github.com/adityaarsharma/pickle/wiki/slack-token) in the wiki.
+`/pickle-setup` walks you through creating a free Slack app and pasting the `xoxp-` token. Takes 2 minutes. Always free on every Slack plan.
 
 ---
 
@@ -196,40 +107,58 @@ If you're on a shared Claude account or a locked workspace and need a personal t
 |--------|---------|-------|
 | Channels | ✅ | ✅ |
 | Direct messages | ✅ | ✅ |
-| Group DMs | ✅ | ✅ (mpim) |
-| Task comments | ✅ | — |
-| Threaded replies | ✅ | ✅ |
-| Task descriptions / mentions | ✅ | — |
-| Docs / canvas mentions | ✅ | — |
+| Group DMs | ✅ | ✅ |
+| Task comments + threads | ✅ | — |
+| Task descriptions | ✅ | — |
+| Time entries with descriptions | ✅ | — |
+| Assigned/delegated comments | ✅ | — |
 | Reminders | ✅ | ✅ |
 
 ---
 
-## What Pickle will never do
+## Privacy — your data never leaves your machine
 
-- ❌ Auto-send any message without your confirmation
-- ❌ Post in public channels or group DMs on your behalf
-- ❌ Hide a message because your role "doesn't care" about it
-- ❌ Send a third follow-up to someone you've already nudged twice
-- ❌ Upload your chat data anywhere — it all stays on your machine
+Pickle runs entirely inside your Claude Code session. There is no Pickle server. Your ClickUp token, Slack token, chat messages, and task data are never sent anywhere except the standard Claude API call. You can verify this by reading the source — it's all here in this repo.
+
+**To revoke access instantly:**
+- ClickUp: Settings → Integrations & ClickApps → ClickUp API → Generate a new token (old one dies immediately)
+- Slack: api.slack.com/apps → your Pickle app → Install App → Revoke
+
+---
+
+## Update
+
+```
+/pickle-update
+```
+
+Pulls the latest version from GitHub. Your tokens, role, and report history are untouched.
 
 ---
 
 ## Uninstall
 
 ```bash
-rm -rf \
-  ~/.claude/skills/pickle-clickup \
-  ~/.claude/skills/pickle-slack \
-  ~/.claude/skills/pickle-update \
-  ~/.claude/pickle-mcp \
-  ~/.claude/pickle
+rm -rf ~/.claude/skills/pickle-clickup \
+       ~/.claude/skills/pickle-slack \
+       ~/.claude/skills/pickle-report \
+       ~/.claude/skills/pickle-update \
+       ~/.claude/pickle-mcp \
+       ~/.claude/pickle
 ```
 
-Then remove the `mcpServers.clickup` and/or `mcpServers.slack` blocks from `~/.claude.json`.
+Remove the `mcpServers.clickup` and/or `mcpServers.slack` entries from `~/.claude.json`.
 
 ---
 
-## Credits
+## What Pickle will never do
 
-Built by [Aditya Sharma](https://github.com/adityaarsharma). MIT licensed. Contributions welcome.
+- Auto-send any message without your confirmation
+- Post to public channels or group DMs on your behalf
+- Send a third follow-up to someone you've already nudged twice
+- Upload your tokens, messages, or task data anywhere
+- Charge you — free forever for solo use
+
+---
+
+Built by [Aditya Sharma](https://adityaarsharma.com) · [adityaarsharma.com/pickle](https://adityaarsharma.com/pickle) · MIT License
