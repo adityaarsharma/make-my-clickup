@@ -29,26 +29,30 @@ No other tool compares what your team **said** they'd do against what the **task
 
 ---
 
-## Two tools in one
+## Three platforms. Three independent tools.
 
-### 👤 For you — `/pickle-clickup` and `/pickle-slack`
+Pickle covers **ClickUp**, **Slack**, and **Microsoft Teams**. Each ecosystem stays completely isolated — data never crosses between them.
 
-Reads every surface where work decisions happen — DMs, channels, task comments, threaded replies, assigned comments, reminders — and gives you a ranked inbox of what needs your attention right now.
+### 👤 Personal inbox — what needs your action
 
 ```
-/pickle-clickup 24h          # everything in ClickUp that needs you
+/pickle-clickup 24h          # ClickUp inbox — last 24 hours
 /pickle-clickup 7d followup  # last week + draft follow-ups
-/pickle-slack 24h            # same for Slack
+/pickle-slack 24h            # Slack inbox
+/pickle-teams 24h            # Microsoft Teams inbox (DMs, channels, Planner)
+/pickle-teams 7d followup    # Teams + draft follow-up messages
 ```
+
+Each command reads every surface in that ecosystem — DMs, channels, group chats, task/card comments, threaded replies, assigned comments, reminders, Planner tasks — and gives you a ranked inbox of what needs your action right now.
 
 ### 🧑‍💼 For managers — `/pickle-report`
 
-Scans your team's standups, DMs, task cards, time entries, and comments. Compares commitment to evidence. Posts a full per-person report to the team channel with scores, patterns, action items, and private escalation flags.
+Scans your team's standups, DMs, task cards, time entries, and comments in ClickUp. Compares commitment to evidence. Posts a full per-person report to the team channel with scores, patterns, action items, and private escalation flags.
 
 ```
 /pickle-report marketing-hq 7d     # weekly team pulse
 /pickle-report engineering-hq 14d  # two-week view
-/pickle-report design-hq 1m        # monthly rollup from stored reports
+/pickle-report design-hq 1m        # monthly rollup from stored reports (no ClickUp scan needed)
 ```
 
 **What the report covers per person:**
@@ -57,7 +61,10 @@ Scans your team's standups, DMs, task cards, time entries, and comments. Compare
 - Truly Done Check — status closed + description + time tracked (all three required)
 - Score: Delivery % | Time Docs % | Card Updates % | Presence %
 - Team velocity trend across last 4 reports (↑↑ ↑ → ↓ ↓↓)
-- Escalation watch — recurring flags, blocker age, expired commitments
+- Standup copy-paste detection — same update 3+ days = flagged
+- Expired promises — "will finish by Friday" + still open = flagged
+- Blocker age — how many days unresolved, auto-escalates at 14 days
+- Escalation watch — 3+ declining reports or same unresolved flag 4+ weeks
 - Private manager section — what *you* need to unblock
 
 ---
@@ -99,20 +106,46 @@ Pickle reads Slack via your own user token — not a shared app, not a connector
 
 `/pickle-setup` walks you through creating a free Slack app and pasting the `xoxp-` token. Takes 2 minutes. Always free on every Slack plan.
 
+## Connect Microsoft Teams
+
+Two paths — both free:
+
+**Option A: Official connector** (easiest)
+1. claude.ai → Settings → Connectors → Microsoft Teams → Connect
+2. Complete OAuth in your browser
+3. Restart Claude Code → run `/pickle-teams`
+
+**Option B: Azure AD app token** (persistent, recommended for power users)
+1. portal.azure.com → App registrations → New registration
+2. Add Graph API permissions: `Chat.Read`, `ChannelMessage.Read.All`, `Team.ReadBasic.All`, `User.Read`, `Tasks.ReadWrite`, `offline_access`
+3. Run device flow auth — `/pickle-teams` will guide you through it step by step
+4. Token saved to `~/.claude/pickle/teams-config.json` and auto-refreshes
+
+**Quick test with Graph Explorer** (1-hour token, no app needed):
+1. developer.microsoft.com/graph/graph-explorer → sign in
+2. Copy the `Authorization: Bearer eyJ...` token from DevTools
+3. `echo '{"access_token":"PASTE_HERE"}' > ~/.claude/pickle/teams-config.json`
+4. Run `/pickle-teams`
+
+Required permissions: `Chat.Read` · `ChannelMessage.Read.All` · `Team.ReadBasic.All` · `User.Read` · `Tasks.ReadWrite`
+
 ---
 
 ## Every surface covered
 
-| Source | ClickUp | Slack |
-|--------|---------|-------|
-| Channels | ✅ | ✅ |
-| Direct messages | ✅ | ✅ |
-| Group DMs | ✅ | ✅ |
-| Task comments + threads | ✅ | — |
-| Task descriptions | ✅ | — |
-| Time entries with descriptions | ✅ | — |
-| Assigned/delegated comments | ✅ | — |
-| Reminders | ✅ | ✅ |
+| Source | ClickUp | Slack | Teams |
+|--------|---------|-------|-------|
+| Channels | ✅ | ✅ | ✅ |
+| Direct messages (1:1) | ✅ | ✅ | ✅ |
+| Group DMs / group chats | ✅ | ✅ | ✅ |
+| Meeting chats | — | — | ✅ |
+| Task comments + threads | ✅ | — | — |
+| Task descriptions | ✅ | — | — |
+| Time entries with descriptions | ✅ | — | — |
+| Assigned/delegated comments | ✅ | — | — |
+| Planner tasks | — | — | ✅ |
+| Reminders | ✅ | ✅ | — |
+| Approvals (Adaptive Cards) | — | — | ✅ |
 
 ---
 
@@ -141,6 +174,7 @@ Pulls the latest version from GitHub. Your tokens, role, and report history are 
 ```bash
 rm -rf ~/.claude/skills/pickle-clickup \
        ~/.claude/skills/pickle-slack \
+       ~/.claude/skills/pickle-teams \
        ~/.claude/skills/pickle-report \
        ~/.claude/skills/pickle-update \
        ~/.claude/pickle-mcp \

@@ -417,6 +417,10 @@ Filter: `messageType == "message"` only.
 - Messages with `MY_USER_ID` in `mentions[]` → INBOX CANDIDATE
 - Messages from me with no responses → FOLLOWUP CANDIDATE
 - Meeting chats: also scan for patterns like "action item", "AI:", "TODO:", "@name will", "by [date]"
+- Meeting chats: scan for MY_DISPLAY_NAME in plain text references (e.g. "Aditya will handle") — not all meeting summaries use @mentions
+- Adaptive Card messages from the Approvals app: body contains "approval", "approve", "pending your review" → always INBOX CANDIDATE regardless of mention status
+- Loop components / collaborative notes in chat: treat as background context only, not inbox items
+- System messages (messageType != "message"): skip entirely — these are call-started, member-added, etc. events
 
 Build `CHAT_INBOX[]` and `CHAT_FOLLOWUP[]`.
 
@@ -806,6 +810,15 @@ STATEEOF
 | `teams-config.json` malformed | Print: "Config file is invalid JSON. Expected: {access_token: '...'}". STOP. |
 | Bash `curl` not found | Print: "curl is required. Install via: brew install curl". STOP. |
 | Channel scan fails with 403 | Some channels require member/owner. Skip and note in summary. |
+| Message body is null | `body.content` can be null for system messages or deleted messages. Always null-check before parsing. Skip if null. |
+| Adaptive Card messages | `body.contentType == "html"` but content is `<attachment...>`. Strip to extract any plain text. Flag as "[Adaptive Card — open in Teams to view full content]" |
+| Deleted message | `deletedDateTime` non-null. Skip entirely — do not treat as inbox item. |
+| Guest user @mention | Guest user IDs in `mentions[].mentioned.user.id` may not match `MY_USER_ID` pattern. Also check `mentions[].mentioned.user.displayName` against `MY_DISPLAY_NAME` as fallback. |
+| Message from bot/app | `from.application` non-null (bot/app sender). Skip for inbox scoring but retain if it's an approval request (e.g. Approvals app) — detect by checking message body for "approve", "review", "action required". |
+| Private channel 403 | Private channels require explicit membership. Log as "skipped (private — no access)" in summary. Never block the run. |
+| Federated/external user | `from.user.tenantId` differs from your tenant. Still valid sender — treat as normal inbox item. |
+| Meeting chat with no participants | Meeting chats created from calendar invites can have 0 members in `/chats/{id}/members`. Skip participant name fetch if empty, label as "Meeting chat: {topic}". |
+| Pagination | All `curl` calls returning `value[]` MUST follow `@odata.nextLink` for pagination. Never assume first page is complete for DMs or active channels. |
 
 ---
 
