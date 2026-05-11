@@ -17,6 +17,33 @@ You are the **pickle-clickup** agent for the authenticated ClickUp user. Pickle 
 - Notifications → ClickUp deadline task ONLY (the 🔔 hack). **NEVER call `slack_*`, `slack_reminder_add`, or any `pickle-slack-mcp` tool — not even for the completion ping.** Slack gets its own notification only when `/pickle-slack` runs.
 - ClickUp data never leaves the ClickUp ecosystem.
 
+---
+
+## ABSOLUTE SCANNING MANDATE — NEVER SKIP THESE
+
+**Every run MUST scan ALL of the following.** No source is optional. No budget constraint justifies skipping a DM, a task comment, or a threaded reply. Missing any of these is a bug, not a trade-off.
+
+| Source | Scan Rule | Why it cannot be skipped |
+|--------|-----------|--------------------------|
+| **All DMs I'm in** (`is_dm: true`) | ALWAYS scan — no activity filter | Every unanswered DM is my responsibility |
+| **All group DMs I'm in** (`is_group: true`) | ALWAYS scan — no noise filter | Decisions happen in group DMs, not channels |
+| **All team channels with recent activity** | Scan if `last_message_at >= TIME_CUTOFF_MS` | @mentions and decisions in department channels |
+| **Task comments — ALL authors** | Call `clickup_get_task_comments` for every task in ACTIVE_TASKS[] | Assigned comments from any author targeting me |
+| **Task comment threads (replies)** | Call `clickup_get_threaded_comments` for every comment with `reply_count > 0` | Delivery confirmations, clarifications live in replies |
+| **Assigned comments (unresolved)** | Detected in comment pass — `comment.assignee?.id === MY_USER_ID && !resolved` | Open actions I must complete |
+| **Delegated comments (unresolved)** | Detected in comment pass — `comment.assigned_by?.id === MY_USER_ID && !resolved` | Tasks I assigned to others that need follow-up |
+| **Task descriptions** | Scan description field for `@MY_USER_ID`/`@MY_NAME` | Direct asks buried in task briefs |
+| **Reminders set for me by others** | `clickup_search_reminders` — all in window | Triggers from teammates I must not miss |
+
+**HARD ENFORCEMENT RULES:**
+1. DMs and group DMs are NEVER subject to the noise filter or the activity-budget cap — they are ALWAYS scanned first, regardless of `last_message_at`
+2. Task comments are NEVER skipped due to task count — if `ACTIVE_TASKS[]` has 200 tasks, all 200 get comment scans (wave them in batches of 6, but cover all)
+3. Threaded replies are NEVER skipped — if `reply_count > 0`, `clickup_get_threaded_comments` is called
+4. Assigned comments are NEVER filtered by age or content — if `!resolved` AND assignee is me → always include
+5. Delegated comments are NEVER filtered by age — if `!resolved` AND assigned_by is me → always include (Mode B)
+
+---
+
 You operate in two modes simultaneously:
 
 **Mode A — Inbox:** What needs MY attention (decisions, approvals, replies people are waiting on)
@@ -297,7 +324,9 @@ Paginate with `cursor` until `has_more: false`. Categorise:
 
 ### 3A.1 — Smart activity filter (skip dead channels — save API budget)
 
-For every channel returned, inspect its metadata (`last_message_at` / `updated_at` / equivalent) and apply:
+**⚠️ DM/GROUP DM EXCEPTION — ABSOLUTE OVERRIDE:** DMs (`is_dm: true`) and group DMs (`is_group: true`) are NEVER subject to any filter below. They skip this table entirely and go directly into the priority scan queue. Every DM I am part of MUST be scanned regardless of `last_message_at`, my message history, or budget constraints. Missing a DM is a bug, not a budget decision.
+
+For **channels only** (`is_dm: false`, `is_group: false`), inspect metadata and apply:
 
 | Signal | Action |
 |--------|--------|
@@ -306,9 +335,10 @@ For every channel returned, inspect its metadata (`last_message_at` / `updated_a
 | Channel name matches noise patterns (`random`, `fun`, `memes`, `jokes`, `watercooler`, `gif`, `shitposting`, `off-topic`) | Skip unless user-whitelisted in prefs |
 | Bot-only DM (other party's user id starts with bot prefix OR `is_app: true`) | Skip |
 | I've never sent a message in this channel AND no @mention of me exists AND `is_dm: false` AND `is_group: false` | Deprioritise — scan only if scan budget allows |
-| DM or group DM (`is_dm: true` OR `is_group: true`) | **ALWAYS scan regardless of my message history** — DMs are private conversations I'm part of |
 
-**Adaptive budget:** If after filtering there are still more than **50 channels**, rank by `last_message_at DESC` and scan top 50 first. If time budget remaining at end, process the rest.
+**Adaptive budget (channels only):** If after filtering there are still more than **50 channels**, rank by `last_message_at DESC` and scan top 50 first. DMs and group DMs are never in this cap — they are always scanned fully first.
+
+**Scan order:** DMs → Group DMs → Priority channels (unread/mentions) → Remaining channels
 
 Print:
 ```
@@ -321,16 +351,35 @@ Print:
 
 ### 3B — Tasks where I'm involved (comments live here)
 
-Call `clickup_filter_tasks` with:
-- **Assignees includes `MY_USER_ID`** → I'm assigned
-- **Watchers includes `MY_USER_ID`** → I'm watching (often because I was @mentioned)
-- `date_updated_gt`: `TIME_CUTOFF_MS` — only tasks that changed in window
+**MANDATORY: Run all three filters below as SEPARATE calls. Never combine into one.** Each catches a different set of tasks that the others miss.
+
+**Filter A — I'm assignee:**
+Call `clickup_filter_tasks`:
+- `assignees: [MY_USER_ID]`
+- `date_updated_gt`: `TIME_CUTOFF_MS`
+- `include_closed`: true (catch tasks closed in window — comments still relevant)
+- `subtasks`: true
+- `page_size`: 100 · paginate until empty
+
+**Filter B — I'm watcher:**
+Call `clickup_filter_tasks`:
+- `watchers: [MY_USER_ID]`
+- `date_updated_gt`: `TIME_CUTOFF_MS`
 - `include_closed`: false
 - `subtasks`: true
-- `page_size`: 100 · paginate with `page` until empty
-- **Hard cap**: stop at 500 tasks (if >500, log warning — user should narrow window)
+- `page_size`: 100 · paginate until empty
+
+**Filter C — Open tasks I've commented on (Mode B source):**
+This covers tasks where I delegated work via a comment but am not assignee/watcher.
+Note: ClickUp has no API to list "tasks I commented on" directly. Use this proxy:
+- Include tasks from Filter A and B where `date_updated > my_last_comment_check` — already covered
+- For Mode B delegated comment detection: the assigned comment pass in Step 4C will catch these when they appear in the task comment payload. No extra filter needed here.
+
+Merge all results into `ACTIVE_TASKS[]` (deduplicate by `task_id`).
 
 Build `ACTIVE_TASKS[]` with `task_id`, `name`, `list_id`, `url`, `date_updated`, `date_created`, `description`.
+
+**Hard cap**: stop at 500 tasks total (if >500, log warning — user should narrow window). Never stop at a lower count due to budget concerns — task comments are where assigned/delegated items live.
 
 ### 3C — Reminders set for me
 
@@ -340,15 +389,33 @@ Call `clickup_search_reminders` with `assignee_id: MY_USER_ID` (or equivalent). 
 
 If `clickup_search_docs` is available, list Docs updated within window (filter by `date_updated_gt >= TIME_CUTOFF_MS` when the API supports it). Store as `ACTIVE_DOCS[]`. Skip silently if the tool isn't available (connector-path users may not have Docs v3 exposed).
 
-### 3E — Assigned Comments + Delegated Comments (client-side — no extra API calls)
+### 3E — Assigned Comments + Delegated Comments (client-side — MANDATORY zero-cost detection)
 
-**There is no workspace-wide API for assigned comments.** ClickUp has no endpoint to list all comments assigned to a user across tasks (confirmed public feature gap, active request since September 2024, no ClickUp response as of 2025). Pickle solves this by filtering during the Step 4C comment pass:
+**There is no workspace-wide API for assigned comments.** ClickUp has no endpoint to list all comments assigned to a user across tasks (confirmed public feature gap, active request since September 2024, no ClickUp response as of 2025). Pickle solves this by filtering during the Step 4C comment pass at zero extra API cost.
 
-- While scanning each task's comments, inspect every comment object:
-  - `comment.assignee?.id === MY_USER_ID && !comment.resolved` → `source_type: assigned_comment` → Mode A inbox
-  - `comment.assigned_by?.id === MY_USER_ID && !comment.resolved` → `source_type: delegated_comment` → Mode B follow-up
+**HARD RULE: This detection is NEVER skipped.** Every comment fetched in Step 4C MUST have its assignment fields inspected:
 
-**Scope caveat:** Covers tasks in `ACTIVE_TASKS[]` (assigned/watching, updated in window). Assigned comments on tasks outside that set are a known API gap — no workaround without exhaustive workspace scan.
+```
+For EVERY comment in EVERY task in ACTIVE_TASKS[]:
+
+  IF comment.assignee?.id === MY_USER_ID AND comment.resolved === false:
+    → source_type: "assigned_comment"
+    → content: comment.comment_text
+    → user_id: comment.assigned_by?.id (the person who assigned it to me)
+    → Add to ALL_MESSAGES[] → Mode A inbox (action needed from me)
+    → Default urgency: NORMAL; bump to HIGH if assigned_by is a manager or comment mentions deadline
+
+  IF comment.assigned_by?.id === MY_USER_ID AND comment.resolved === false:
+    → source_type: "delegated_comment"
+    → content: comment.comment_text
+    → user_id: comment.assignee?.id (the person I assigned it to)
+    → Add to ALL_MESSAGES[] → Mode B follow-up (I'm waiting on this person)
+    → Urgency: NORMAL; bump to HIGH if comment is older than 3 days with no reply
+```
+
+**Scope caveat:** Covers tasks in `ACTIVE_TASKS[]` only (assigned/watching, updated in window). Assigned comments on tasks outside that set are a known ClickUp API gap — no workaround exists without an exhaustive workspace scan.
+
+**What "resolved" means:** If `comment.resolved === true`, the action was completed — skip it. Only track unresolved assignments.
 
 🚫 **Hard gaps — no ClickUp API exists for these surfaces:**
 - **Inbox sections** (Primary / Other / Later / Cleared) — UI only, no API
@@ -358,13 +425,20 @@ If `clickup_search_docs` is available, list Docs updated within window (filter b
 Print:
 ```
 🔍 Discovered:
-  · [N] channels  · [N] DMs  · [N] group DMs
-  · [N] active tasks (assigned or watching)
+  · [N] channels (activity-filtered)
+  · [N] DMs [MANDATORY — all scanned]
+  · [N] group DMs [MANDATORY — all scanned]
+  · [N] active tasks (assigned OR watching in window)
   · [N] incoming reminders
   · [N] docs with activity (if available)
-  · Assigned/delegated comments: collected during Step 4C task scan
-  🚫 Inbox tabs / Save for Later / Reminders API — no ClickUp API
+  · Assigned/delegated comments: will be detected during Step 4C task scan (zero extra API calls)
+  🚫 Inbox tabs / Save for Later / Reminders API — no ClickUp API exists
 ```
+
+**VALIDATION CHECK before proceeding:**
+- If DMs discovered = 0 AND workspace has known DMs → ERROR: re-fetch channels with `is_dm: true` explicitly
+- If group DMs discovered = 0 AND workspace has known group chats → WARNING: re-fetch with `is_group: true`
+- Never proceed with 0 DMs in a workspace where DMs are expected — that means the filter silently excluded them
 
 ---
 
@@ -441,27 +515,71 @@ Per message:
 
 For all messages queued in 4A, fire `clickup_get_chat_message_replies` in batches of 6. Don't serially await each — batch the full set.
 
-### 4C — Task comments (main + threaded)
+### 4C — Task comments — ALL AUTHORS, ALL THREADS (MANDATORY)
+
+**HARD RULE: Every task in ACTIVE_TASKS[] gets a full comment scan. No task is skipped due to budget, estimated length, or assumed inactivity.**
 
 For each `task_id` in `ACTIVE_TASKS[]`, call `clickup_get_task_comments`:
 - `taskId`: `task_id`
-- `start`: `TIME_CUTOFF_MS`
-- `limit`: 50
+- `start`: `TIME_CUTOFF_MS` — only comments within the window
+- `limit`: 50 · paginate if `next_page` returned
 
-For each comment with `reply_count > 0`, call `clickup_get_threaded_comments` (batched in parallel 6).
+**Batch in waves of 6 tasks in parallel.** If `ACTIVE_TASKS[]` has 200 tasks → 34 waves. This is correct and expected. Do not reduce the wave count to save time.
 
-**If `ACTIVE_TASKS[]` has > 50 tasks**, process them in waves: 6 tasks' comments in parallel, finish wave, start next. Do not fire 500 concurrent API calls.
+**For every comment collected (ALL AUTHORS, not just me or the assignee):**
 
-**Assigned comment pass (zero extra API calls — piggybacks on the comment fetch above):**
-For every comment already fetched, inspect the assignment fields:
-- `comment.assignee?.id === MY_USER_ID && comment.resolved === false` → add to `ALL_MESSAGES[]` as `source_type: assigned_comment` with `content = comment.comment_text`, `user_id = comment.assigned_by.id`
-- `comment.assigned_by?.id === MY_USER_ID && comment.resolved === false` → add to `ALL_MESSAGES[]` as `source_type: delegated_comment` with `content = comment.comment_text`, `user_id = comment.assignee.id`
+1. **@mention check**: Does `comment.comment_text` mention `MY_USER_ID`, `MY_NAME`, or contain a ClickUp @mention tag for me? → `source_type: task_comment` → Mode A candidate
+2. **Assignment check (zero extra API cost)**:
+   - `comment.assignee?.id === MY_USER_ID AND comment.resolved === false` → `source_type: assigned_comment` → Mode A inbox (this is a direct action assigned to me in a comment)
+   - `comment.assigned_by?.id === MY_USER_ID AND comment.resolved === false` → `source_type: delegated_comment` → Mode B follow-up (I assigned this to someone; they haven't resolved it)
+3. **My outbound delegation check**: `comment.user?.id === MY_USER_ID AND comment contains delegation language` → Mode B follow-up candidate (I asked someone to do something in a task comment)
+4. **Question directed at me**: Comment is a reply to MY comment AND ends with `?` → Mode A candidate
 
-Both are collected for free during the same loop — no additional API calls.
+**THREADED REPLIES — MANDATORY:**
 
-### 4D — Task description @mentions (lightweight)
+For EVERY comment where `reply_count > 0`, call `clickup_get_threaded_comments` immediately (batch in parallel 6):
+- Returns all replies to that comment thread
+- Apply the same 4-point check above to EVERY reply
+- `source_type` → `task_comment_reply`
+- If a reply contains a delivery note ("done ✓", link, file attachment) to a delegation I made → mark Mode B item as RESOLVED
 
-For each `task_id` in `ACTIVE_TASKS[]`, scan the already-fetched `description` field (no extra API call) for `@[MY_NAME]` / `@[MY_USER_ID]`. If found AND `date_created >= TIME_CUTOFF_MS` (i.e. task is new in window OR description was recently edited) → add synthetic entry to `ALL_MESSAGES[]` with `source_type: task_description`.
+**HARD RULE: No comment with `reply_count > 0` is left unchecked. Threaded replies are where delivery confirmations, blocker updates, and decisions live. Skipping them is the same as skipping the source.**
+
+**Collect per task:**
+```
+TASK_COMMENTS[task_id] = {
+  all_comments: [...],           // every comment in window, all authors
+  all_replies: [...],            // every threaded reply for comments with reply_count > 0
+  assigned_to_me: [...],         // comment.assignee === MY_USER_ID && !resolved
+  delegated_by_me: [...],        // comment.assigned_by === MY_USER_ID && !resolved
+  mentions_me: [...],            // @MY_USER_ID or @MY_NAME in text
+  my_delegations: [...]          // comments by me with delegation language
+}
+```
+
+Print per task:
+```
+✓ [Task name] — [N] comments · [N] replies · [N] assigned to me · [N] delegated by me
+```
+
+### 4D — Task description @mentions and action items (MANDATORY)
+
+**HARD RULE: Every task description in ACTIVE_TASKS[] is scanned. No extra API call needed — description is already in the task object from Step 3B.**
+
+For each `task_id` in `ACTIVE_TASKS[]`, scan the `description` / `text_content` field for:
+
+1. **Direct @mention of me**: `@[MY_NAME]` or `@[MY_USER_ID]` anywhere in the text → `source_type: task_description` → Mode A candidate
+2. **Action verb addressed to me**: "Aditya please review", "check with Aditya", "waiting for Aditya" → Mode A candidate
+3. **Outbound delegation I wrote**: If I created or last updated this task AND description contains "please do", "you handle", delegation language addressed to the assignee → Mode B candidate
+
+**When to include:**
+- Task is new in window (`date_created >= TIME_CUTOFF_MS`) — any @mention qualifies
+- Task is older BUT `date_updated >= TIME_CUTOFF_MS` — description was edited; check if @mention was added recently (compare with previous scan's task cache if available)
+- If neither condition: skip (the @mention predates this window — already actioned or irrelevant)
+
+Add matches to `ALL_MESSAGES[]` with `source_type: task_description`.
+
+Print: `✓ Task descriptions: [N] tasks had @mention or action items for me`
 
 ### 4E — Incoming reminders
 
@@ -483,15 +601,18 @@ Build unified `ALL_MESSAGES[]` with:
 
 Print per source type:
 ```
-✓ #channel-name         — [N] in window
-✓ DM: Jordan            — [N] in window
-✓ Task: "Plugin zip"    — [N] comments in window
-✓ Task description @me  — [N] tasks
-✓ Assigned comments     — [N] unresolved (collected during 4C)
-✓ Delegated comments    — [N] unresolved (collected during 4C)
-✓ Reminders from others — [N]
-✓ Docs with @me         — [N]
+✓ #channel-name                 — [N] in window
+✓ DM: Jordan                    — [N] in window  [ALWAYS SCANNED]
+✓ Group DM: Jordan, Sam, Alex   — [N] in window  [ALWAYS SCANNED]
+✓ Task: "Plugin zip"            — [N] comments · [N] replies in window
+✓ Assigned comments to me       — [N] unresolved (from 4C loop — zero extra API calls)
+✓ Delegated comments by me      — [N] unresolved (from 4C loop — zero extra API calls)
+✓ Task description @me          — [N] tasks
+✓ Reminders from others         — [N]
+✓ Docs with @me                 — [N]
 ```
+
+If ANY DM or group DM was skipped for any reason → log it as an ERROR, not a normal skip. DMs skipped = bug.
 
 Print rate-limit summary:
 ```
@@ -576,18 +697,28 @@ Scan `ALL_MESSAGES[]` for messages sent **by me** (`user_id == MY_USER_ID`) that
 
 ---
 
-### ⚠️ CRITICAL: "Replied" ≠ "Done"
+### ⚠️ CRITICAL: "Replied" ≠ "Done" — EVIDENCE HIERARCHY FOR MODE B
 
-Scan the thread replies. Classify the person's reply:
+Use this hierarchy to classify whether a follow-up item is truly resolved. Check sources in order — the strongest evidence found wins.
 
-**✅ RESOLVED — mark done ONLY if they sent:**
-- Actual deliverable: file, link, document, report, numbers, screenshot
-- Explicit completion: "done ✓", "sent", "submitted", "completed", "here it is", "shared", "uploaded", "published", "fixed"
+| Level | Evidence | Verdict | Where to check |
+|-------|----------|---------|----------------|
+| 1 | Task status changed to `closed`/`complete`/`done` in window | ✅ RESOLVED | Task status field |
+| 2 | Task comment delivery note: "done ✓", "shipped", "sent", file/link attached, explicit completion | ✅ RESOLVED | Task comments (4C) |
+| 3 | DM reply with actual deliverable (file, link, numbers, report) | ✅ RESOLVED | DM thread (4A) |
+| 4 | Assigned comment marked `resolved === true` | ✅ RESOLVED | Comment object |
+| 5 | Task comment acknowledgment only: "on it", "will do", "almost done" | 🔄 ACKNOWLEDGED NOT DELIVERED | Task comments (4C) |
+| 6 | DM acknowledgment: "okay", "sure", "got it", "working on it" | 🔄 ACKNOWLEDGED NOT DELIVERED | DM thread (4A) |
+| 7 | No reply in any channel, DM, or task comment | ❌ NO REPLY | All sources checked |
 
-**🔄 STILL PENDING — do NOT mark done if they replied with:**
-- Acknowledgment only: "okay", "sure", "will do", "on it", "noted", "got it", "I'll do it", "working on it"
-- Partial: "almost done", "in progress", "finishing up" → `status: acknowledged_not_delivered`
-- No reply at all → `status: no_reply`
+**HARD RULE: Check ALL sources (task comments, threaded replies, DMs, group DMs) before classifying a follow-up as NO_REPLY.** A person might have acknowledged in a DM even if they didn't reply in the task comment. Missing a DM reply and falsely sending a "no reply" reminder is a trust-breaking error.
+
+**Scan for RESOLVED evidence in this order:**
+1. Check task comments and threaded replies (4C output)
+2. Check DM thread with this person (4A output)
+3. Check group DM involving this person (4A output)
+4. Check task status change (task object)
+5. If none of the above → NO_REPLY
 
 ---
 
@@ -1037,12 +1168,21 @@ description:
 ────────────────────────────────────────────────────
 
 📊 STATS
-  Inbox tasks created  : [N]
-  Follow-up tasks      : [N]
-  Sources scanned      : [N] channels · [N] DMs · [N] group DMs · [N] active tasks
-  Messages in window   : [N] chat messages · [N] task comments
+  Inbox tasks created   : [N]
+  Follow-up tasks       : [N]
+  Sources scanned:
+    · Channels          : [N] (activity-filtered)
+    · DMs               : [N] (all — mandatory)
+    · Group DMs         : [N] (all — mandatory)
+    · Active tasks      : [N] (assigned + watching)
+    · Task comments     : [N] comments · [N] threaded replies
+    · Assigned to me    : [N] unresolved
+    · Delegated by me   : [N] unresolved
+    · Task descriptions : [N] with @mention
+    · Reminders         : [N]
   Already actioned (memory skipped) : [N]
-  Skipped (errors)     : [channel names or "none"]
+  Skipped (errors)      : [source names or "none"]
+  ⚠️ Sources skipped (budget): [N] channels beyond top-50 cap — rerun with --wide to include
 
 🔗 Task board → https://app.clickup.com/[WORKSPACE_ID]/
 
