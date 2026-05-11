@@ -114,12 +114,22 @@ Store `CHANNEL_ID`, `CHANNEL_FULL_NAME`.
 
 ---
 
-## STEP 3 — BUILD TEAM ROSTER
+## STEP 3 — BUILD TEAM ROSTER FROM CHANNEL (auto-discovery)
 
-Build `TEAM[]` from channel members, excluding the authenticated user (MY_USER_ID) and bots.
-If API doesn't return members → infer from message authors in Step 4A.
+**The channel name IS the team. No manual roster needed.**
+
+- `marketing-hq` → marketing team = members of that channel
+- `qa` → QA team = members of that channel
+- `nexter-hq` → Nexter team = members of that channel
+- Any channel → TEAM[] = that channel's member list
+
+Call `clickup_get_chat_channel` or read channel members from Step 2 result.
+Build `TEAM[]` from channel members, excluding MY_USER_ID and bots.
+If the API does not return members → infer from message authors found in Step 4A.
 
 For each member, store: `{ user_id, name, username, email }`.
+
+Print: `👥 Team ([N] members): [name1], [name2], ...`
 
 ---
 
@@ -206,13 +216,32 @@ Extract per task:
 
 Batch 8 in parallel.
 
-### 4D — ALL TASK COMMENTS — EVERY AUTHOR ⚠️ MANDATORY
+### 4D — TASK COMMENTS — INTERACTION-GATED ⚠️ MANDATORY (but smart)
 
-**THIS IS A HARD RULE: Call `clickup_get_task_comments` for EVERY task in MEMBER_TASKS[user_id]. Read ALL comments regardless of who wrote them — not just comments by the assignee.**
+**Token gate: Only call `clickup_get_task_comments` on tasks where this person has actually interacted. Do NOT scan every task in the workspace.**
 
-Why: Delivery notes, blocker acknowledgements, and completion confirmations are frequently written as task comments by the assignee. A task with an empty description and a detailed delivery comment is NOT the same as a task with no evidence. Comment-level documentation is valid evidence.
+**INTERACTION FILTER — apply before ANY comment fetch:**
 
-For each task comment:
+For each task in `MEMBER_TASKS[user_id]`, check the task detail fields already fetched in 4C:
+
+```
+SKIP comment fetch if ALL of the following are true:
+  - task.comment_count == 0                        → no comments exist, nothing to read
+  - task.date_updated < TIME_CUTOFF_MS             → not touched in window
+  - member is NOT the sole assignee                → may be shared task, check separately
+
+FETCH comments if ANY of the following are true:
+  - task.comment_count > 0                         → comments exist
+  - task.date_updated >= TIME_CUTOFF_MS            → updated in window (someone touched it)
+  - task.time_spent_ms > 0 in window              → time was tracked
+  - member is primary/sole assignee               → their work card, always check
+```
+
+**This gate saves 60–80% of comment API calls on inactive tasks. Never skip a task that passes any FETCH condition.**
+
+Why comments matter even when gated: Delivery notes, blocker acknowledgements, and completion confirmations are frequently written as task comments. A task with an empty description and a detailed delivery comment is NOT the same as a task with no evidence.
+
+For each task comment (on gated-in tasks only):
 ```
 {
   comment_id, comment_text,
@@ -251,9 +280,12 @@ DELIVERY_COMMENTS[user_id] = TASK_COMMENTS[user_id].filter(is_delivery_note)
 
 Batch 8 task comment calls in parallel.
 
-### 4E — TASK COMMENT THREADS (REPLIES) ⚠️ MANDATORY
+### 4E — TASK COMMENT THREADS (REPLIES) ⚠️ MANDATORY (reply-gated)
+
+**Token gate: Only fetch threads where `reply_count > 0` AND the parent comment is in-window or the thread may contain in-window replies.**
 
 For every comment where `reply_count > 0`, call `clickup_get_threaded_comments(comment_id)`.
+Skip entirely if `reply_count == 0` — no API call made.
 
 **Why:** Delivery notes are frequently posted as REPLIES to a manager's question or a status request — not as top-level comments. A thread that says "is this done?" → "yes, deployed at 3pm, link: ..." is invisible without fetching replies.
 
@@ -261,11 +293,20 @@ Filter replies to window. Apply same delivery note detection and assigned/delega
 
 Batch 6 threaded comment calls in parallel.
 
-### 4F — DM MESSAGES WITH EACH MEMBER ⚠️ MANDATORY
+### 4F — DM MESSAGES WITH EACH MEMBER ⚠️ MANDATORY (activity-gated)
 
-For each member where `DM_CHANNEL_ID[member.user_id]` exists:
-Call `clickup_get_chat_channel_messages(DM_CHANNEL_ID[member.user_id])`.
-Paginate until older than `TIME_CUTOFF_MS`.
+**Token gate: Check `last_message_at` on the DM channel before fetching full history.**
+
+```
+If DM_CHANNEL.last_message_at < TIME_CUTOFF_MS:
+  → Note "No DM activity in window" for this member. Skip fetch. Zero API calls.
+
+Else:
+  → Call clickup_get_chat_channel_messages(DM_CHANNEL_ID[member.user_id])
+  → Paginate until message date < TIME_CUTOFF_MS
+```
+
+This gate means dormant DMs (no messages in the scan window) cost zero calls — only active DMs are fetched.
 
 Store as `DM_MESSAGES[user_id][]`.
 
@@ -279,10 +320,18 @@ Store as `DM_MESSAGES[user_id][]`.
 
 **DM evidence rule:** A completion claimed in DM but not on the task card is MODERATE evidence (PARTIAL level). It proves the person did the work but they still need to update the card.
 
-### 4G — GROUP DM MESSAGES ⚠️ MANDATORY
+### 4G — GROUP DM MESSAGES ⚠️ MANDATORY (activity-gated)
 
-For each channel in `GROUP_DMS[]`, call `clickup_get_chat_channel_messages`.
-Paginate until older than `TIME_CUTOFF_MS`.
+**Token gate: Same as 4F. Check `last_message_at` before fetching.**
+
+```
+If GROUP_DM.last_message_at < TIME_CUTOFF_MS:
+  → Skip fetch. Note "No group DM activity in window."
+
+Else:
+  → Call clickup_get_chat_channel_messages for that group DM
+  → Paginate until older than TIME_CUTOFF_MS
+```
 
 Filter messages to those sent by or mentioning any `TEAM[]` member.
 
