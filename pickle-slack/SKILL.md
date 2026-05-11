@@ -684,7 +684,7 @@ At the END of Step 7, prune `state.actioned_messages` of any entry whose `list_e
 Before creating any entry, construct the permalink for the source message:
 
 ```
-WORKSPACE_DOMAIN = [team].slack.com   (from auth.test response, e.g. "posimyth.slack.com")
+WORKSPACE_DOMAIN = [team].slack.com   (from auth.test response, e.g. "acme-corp.slack.com")
 TS_NO_DOT        = message ts with the dot removed (e.g. "1776742222.463349" → "1776742222463349")
 PERMALINK        = https://[WORKSPACE_DOMAIN]/archives/[channel_id]/p[TS_NO_DOT]
 ```
@@ -718,10 +718,10 @@ Action needed: [exactly what the running user needs to do — be specific, not "
 ```
 Example:
 ```
-From: @Mehul in #rc-design · Apr 22
+From: @designer in #product-design · Apr 22
 Message: "Can you check the layout system V01 in Figma? Added spacing tokens and nav variants — need your sign-off before we hand to dev."
-Context: RunCloud homepage redesign. Mehul is lead designer. Dev handoff is blocked on approval.
-Action needed: Open Figma, review spacing tokens + nav variants, leave comments or approve so Mehul can proceed.
+Context: Homepage redesign project. Designer is lead. Dev handoff is blocked on approval.
+Action needed: Open Figma, review spacing tokens + nav variants, leave comments or approve so the designer can proceed.
 ```
 
 **2. Set a Slack reminder** — call `slack_reminder_add` tool (from `pickle-slack-mcp`):

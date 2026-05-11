@@ -14,7 +14,7 @@
     "node": ">=18"
   },
   "keywords": ["mcp", "slack", "pickle", "productivity"],
-  "author": "Aditya Sharma <aditya@posimyth.com>",
+  "author": "Aditya Sharma (https://adityaarsharma.com)",
   "license": "MIT",
   "repository": {
     "type": "git",

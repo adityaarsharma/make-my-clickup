@@ -163,9 +163,9 @@ Store `CHANNEL_ID`, `CHANNEL_FULL_NAME`.
 **The channel name IS the team. No manual roster needed.**
 
 - `marketing-hq` → marketing team = members of that channel
-- `qa` → QA team = members of that channel
-- `nexter-hq` → Nexter team = members of that channel
-- Any channel → TEAM[] = that channel's member list
+- `engineering-hq` → engineering team = members of that channel
+- `design-hq` → design team = members of that channel
+- Any channel name → TEAM[] = that channel's member list
 
 Call `clickup_get_chat_channel` or read channel members from Step 2 result.
 Build `TEAM[]` from channel members, excluding MY_USER_ID and bots.
