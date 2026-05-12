@@ -1,0 +1,28 @@
+{
+  "name": "@pickle/teams-mcp",
+  "version": "1.0.0",
+  "description": "Microsoft Teams MCP server for the Pickle project. Delta-cursor incremental sync, batch API.",
+  "type": "module",
+  "main": "server.mjs",
+  "bin": {
+    "pickle-teams-mcp": "./server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "setup": "node setup.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["mcp", "teams", "microsoft-teams", "pickle", "model-context-protocol", "claude"],
+  "author": "Aditya Sharma (https://adityaarsharma.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adityaarsharma/pickle"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  }
+}
