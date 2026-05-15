@@ -84,7 +84,7 @@ corporate proxy, you can also clone the repo manually:
   git clone https://github.com/adityaarsharma/pickle.git
   cp -R pickle/pickle-clickup ~/.claude/skills/   # if ClickUp
   cp -R pickle/pickle-slack   ~/.claude/skills/   # if Slack
-  cp -R pickle/pickle-report  ~/.claude/skills/   # managers only
+  cp -R pickle/pickle-teams   ~/.claude/skills/   # if Teams
   cp -R pickle/pickle-update  ~/.claude/skills/
 ```
 
@@ -109,7 +109,6 @@ Your command palette will show only what you use:
    /pickle-clickup                (if ClickUp connected)
    /pickle-slack                  (if Slack connected)
    /pickle-teams                  (if Microsoft Teams connected)
-   /pickle-report                 (managers with ClickUp only)
    /pickle-update                 (always)
 
 pickle-setup and pickle-me are removed automatically — no

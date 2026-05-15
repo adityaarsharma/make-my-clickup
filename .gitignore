@@ -8,7 +8,7 @@ yarn-error.log*
 # These are auto-created on first run by each skill
 pickle-clickup/state.json
 pickle-slack/state.json
-pickle-report/state.json
+pickle-teams/state.json
 pickle-me/state.json
 pickle-me/memory/
 

@@ -9,7 +9,7 @@
 [![Works with](https://img.shields.io/badge/Works%20with-Claude%20·%20Cursor%20·%20Codex%20·%20Cline-orange?style=flat-square)](#works-with)
 [![GitHub stars](https://img.shields.io/github/stars/adityaarsharma/pickle?style=flat-square)](https://github.com/adityaarsharma/pickle/stargazers)
 
-**What it is:** An MCP server + (optional) skills for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence. Generates weekly performance reports automatically.
+**What it is:** An MCP server + (optional) skills for managers and engineering/product/marketing leads. Audits team performance across ClickUp, Slack, and Microsoft Teams. Compares standup commitments to task evidence.
 
 **Pickle is LLM-agnostic.** The MCP server runs in any MCP-compatible AI client. The slash-command skills are a Claude Code / Claude Desktop convenience layer on top — everything Pickle does is also accessible by calling the MCP tools directly from Cursor, Codex, Cline, Continue, Zed, or your own MCP host.
 
@@ -24,7 +24,7 @@
 Pickle ships in two parts:
 
 1. **The MCP server** (the core) — a Node.js MCP server that talks to ClickUp, Slack, and Microsoft Graph. Runs locally. Works in **any MCP host**.
-2. **The skills** (optional, Claude-only) — SKILL.md files that turn the MCP tools into slash commands (`/pickle-clickup`, `/pickle-report`, etc.) inside Claude Code / Claude Desktop.
+2. **The skills** (optional, Claude-only) — SKILL.md files that turn the MCP tools into slash commands (`/pickle-clickup`, `/pickle-slack`, `/pickle-teams`, etc.) inside Claude Code / Claude Desktop.
 
 | Client | MCP support | How you use Pickle |
 |---|---|---|
@@ -78,11 +78,10 @@ Every pattern below is something Pickle detects automatically across ClickUp, Sl
 
 | Use case | Replaces | One command |
 |---|---|---|
-| **Weekly team pulse** | 45-min Monday status meeting | `/pickle-report marketing-hq 7d` |
-| **Performance review prep** | 3 hours digging through history | Velocity trend + flag history pre-rendered |
+| **Performance review prep** | 3 hours digging through history | `/pickle-clickup 30d` → full flag history |
 | **Returning from vacation** ★ | Wall of 200+ unread messages | `/pickle-clickup 7d` → ranked 7 items |
-| **Auto-escalation** | Manual pattern matching across weeks | Pickle flags 3+ declining reports automatically |
-| **Monthly rollup** | Re-scanning a month of ClickUp data | `/pickle-report channel 1m` synthesises from memory |
+| **Auto-escalation** | Manual pattern matching across weeks | Pickle flags stale tasks and expired promises automatically |
+| **Cross-platform sweep** | Checking ClickUp + Slack + Teams separately | One session, three ecosystems, zero overlap |
 
 ---
 
@@ -98,14 +97,6 @@ Pickle is one product. It reads three platforms — **ClickUp**, **Slack**, **Mi
 ```
 
 Each command scans every surface in that ecosystem — DMs, channels, group chats, task/card comments, threaded replies, assigned comments, reminders — and gives you a ranked inbox of what needs your action right now.
-
-**If you also manage a team in ClickUp,** Pickle has a Manager Mode — same install, one extra command that points at a department channel and posts a team-performance report there:
-
-```
-/pickle-report marketing-hq 7d   # weekly pulse for the marketing-hq channel
-```
-
-Manager Mode uses the same MCP server and the same patterns from the table above — it just applies them across an entire team's week and posts the synthesis back to the channel.
 
 ---
 
@@ -281,7 +272,6 @@ Pulls the latest version from GitHub. Your tokens, role, and report history are 
 rm -rf ~/.claude/skills/pickle-clickup \
        ~/.claude/skills/pickle-slack \
        ~/.claude/skills/pickle-teams \
-       ~/.claude/skills/pickle-report \
        ~/.claude/skills/pickle-update \
        ~/.claude/pickle-mcp \
        ~/.claude/pickle

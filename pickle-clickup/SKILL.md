@@ -235,7 +235,7 @@ Else:
 Always identify `MY_USER_ID` from the authenticated session — don't rely on cache for this.
 
 **After the run, always update task cache:**
-Any tasks fetched during channel scanning → write to `~/.claude/pickle/memory/tasks.json` (keyed by task ID, with cached_at timestamp). This pre-warms memory for `pickle-report` runs later.
+Any tasks fetched during channel scanning → write to `~/.claude/pickle/memory/tasks.json` (keyed by task ID, with cached_at timestamp).
 
 Store: `MY_USER_ID`, `MY_NAME`, `WORKSPACE_ID`, `MEMBER_MAP`
 
@@ -273,17 +273,10 @@ Print: `📋 Task board: Task Board - By Pickle (ID: $TASK_BOARD_ID)`
 
 ### A — Remove THIS skill's previous notification tasks only
 
-**⚠️ Coexistence rule:** pickle-clickup and pickle-report share `Task Board - By Pickle`. Both create 🔔 deadline notification tasks. To prevent one skill from deleting the other's just-created notification before the user sees it, each skill cleans only its own tag — never any 🔔 task indiscriminately.
-
-- pickle-clickup uses tag `pickle-clickup-notif`
-- pickle-report uses tag `pickle-report-notif`
-
 Call `clickup_get_list_tasks` on `TASK_BOARD_ID`. For tasks where:
 - name contains `🔔` AND `due_date < now` AND `tags` includes `"pickle-clickup-notif"`
 
 → Call `clickup_delete_task` on each. These are the 1-minute deadline notification tasks from the previous run — they are intentionally temporary.
-
-Do NOT delete 🔔 tasks tagged `pickle-report-notif` — those belong to pickle-report.
 
 ### B — Auto-delete old Complete tasks (and purge state.json pointers)
 
@@ -1228,7 +1221,6 @@ ClickUp notification only. Never call any Slack tool here — Slack gets its own
 Step A — Clean up THIS skill's previous notification tasks (run first):
 - Call `clickup_get_list_tasks` on `TASK_BOARD_ID`
 - Delete any task where `name` contains `🔔` AND `tags` includes `"pickle-clickup-notif"` via `clickup_delete_task`
-- **Never delete** 🔔 tasks tagged `pickle-report-notif` — those belong to pickle-report.
 
 Step B — Create new notification task:
 - Call `clickup_create_task` on `TASK_BOARD_ID`:

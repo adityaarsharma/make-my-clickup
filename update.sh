@@ -20,13 +20,11 @@ HAS_SLACK_SKILL=0
 HAS_TEAMS_SKILL=0
 HAS_UPDATE_SKILL=0
 HAS_CLICKUP_MCP=0
-HAS_REPORT_SKILL=0
 
 [ -f "$SKILLS_DIR/pickle-clickup/SKILL.md" ] && HAS_CLICKUP_SKILL=1
 [ -f "$SKILLS_DIR/pickle-slack/SKILL.md" ]   && HAS_SLACK_SKILL=1
 [ -f "$SKILLS_DIR/pickle-teams/SKILL.md" ]   && HAS_TEAMS_SKILL=1
 [ -f "$SKILLS_DIR/pickle-update/SKILL.md" ]  && HAS_UPDATE_SKILL=1
-[ -f "$SKILLS_DIR/pickle-report/SKILL.md" ]  && HAS_REPORT_SKILL=1
 [ -f "$PICKLE_MCP_DIR/clickup/server.mjs" ]  && HAS_CLICKUP_MCP=1
 
 if [ "$HAS_CLICKUP_SKILL" -eq 0 ] && [ "$HAS_SLACK_SKILL" -eq 0 ] && [ "$HAS_UPDATE_SKILL" -eq 0 ]; then
@@ -47,7 +45,6 @@ echo "Detected on this machine:"
 [ "$HAS_CLICKUP_SKILL" -eq 1 ] && echo "   ✓ pickle-clickup (ClickUp inbox scanner)"
 [ "$HAS_SLACK_SKILL"   -eq 1 ] && echo "   ✓ pickle-slack (Slack inbox scanner)"
 [ "$HAS_TEAMS_SKILL"   -eq 1 ] && echo "   ✓ pickle-teams (Microsoft Teams inbox scanner)"
-[ "$HAS_REPORT_SKILL"  -eq 1 ] && echo "   ✓ pickle-report (team performance report)"
 [ "$HAS_UPDATE_SKILL"  -eq 1 ] && echo "   ✓ pickle-update (one-command updater)"
 [ "$HAS_CLICKUP_MCP"   -eq 1 ] && echo "   ✓ pickle-mcp/clickup (free MCP server)"
 echo ""
@@ -147,7 +144,7 @@ fi
 # ── Update active skills (only the ones user has) ────────────────
 echo ""
 echo "⏳ [3/4] Updating skill files ..."
-for skill in pickle-update pickle-clickup pickle-slack pickle-teams pickle-report; do
+for skill in pickle-update pickle-clickup pickle-slack pickle-teams; do
   if [ -d "$SKILLS_DIR/$skill" ] && [ -d "$TMPDIR/$skill" ]; then
     cp -R "$TMPDIR/$skill/." "$SKILLS_DIR/$skill/"
     echo "   ✓ $skill"
@@ -169,9 +166,9 @@ echo "$LATEST_TAG" > "$VERSION_FILE"
 # pickle-setup: onboarding wizard, self-deletes after setup. If still
 # present (interrupted setup or old install), remove it now.
 # pickle-me: retired skill.
-# NOTE: pickle-report is NOT deprecated — managers depend on it.
+# pickle-report: removed in v3.0.0.
 CLEANUP_DONE=0
-for deprecated in pickle-setup pickle-me; do
+for deprecated in pickle-setup pickle-me pickle-report; do
   if [ -d "$SKILLS_DIR/$deprecated" ]; then
     rm -rf "$SKILLS_DIR/$deprecated"
     CLEANUP_DONE=1
@@ -204,7 +201,6 @@ echo "⏳ [4/4] Verifying install ..."
 [ "$HAS_CLICKUP_SKILL" -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-clickup/SKILL.md" ] && echo "   ✗ pickle-clickup SKILL.md missing — reinstall needed"
 [ "$HAS_SLACK_SKILL"   -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-slack/SKILL.md" ]   && echo "   ✗ pickle-slack SKILL.md missing — reinstall needed"
 [ "$HAS_TEAMS_SKILL"   -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-teams/SKILL.md" ]   && echo "   ✗ pickle-teams SKILL.md missing — reinstall needed"
-[ "$HAS_REPORT_SKILL"  -eq 1 ] && [ ! -f "$SKILLS_DIR/pickle-report/SKILL.md" ]  && echo "   ✗ pickle-report SKILL.md missing — reinstall needed"
 [ "$HAS_CLICKUP_MCP"   -eq 1 ] && [ ! -f "$PICKLE_MCP_DIR/clickup/server.mjs" ]  && echo "   ✗ ClickUp MCP server.mjs missing — reinstall needed"
 echo "   ✓ All files in place."
 [ "$CLEANUP_DONE" -eq 1 ] && echo "   ✓ Deprecated tools removed (pickle-setup, pickle-me)"
@@ -227,7 +223,7 @@ echo "   2. Reopen it"
 echo "   3. Type /pic  — your active Pickle skills appear in autocomplete"
 echo ""
 echo "Your palette will show only: /pickle-clickup, /pickle-slack,"
-echo "/pickle-teams, /pickle-report (managers), and /pickle-update. Nothing extra."
+echo "/pickle-teams, and /pickle-update. Nothing extra."
 echo ""
 echo "(Skill text changes apply immediately. MCP server changes — only"
 echo " the ClickUp one — need the quit+reopen to re-register tools.)"

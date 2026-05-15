@@ -6,12 +6,10 @@
 
 ## 1. Pickle is ONE product
 
-Pickle is a single product called **Pickle**, built by Aditya Sharma. It happens to ship as four skills (`pickle-clickup`, `pickle-slack`, `pickle-teams`, `pickle-report`) plus a setup wizard and updater — but the public framing is always **one product**, not a portfolio of four.
+Pickle is a single product called **Pickle**, built by Aditya Sharma. It ships as three inbox skills (`pickle-clickup`, `pickle-slack`, `pickle-teams`) plus a setup wizard and updater — but the public framing is always **one product**, not three.
 
-- ❌ Never call `/pickle-report` "Pickle Report" as if it's a sibling product.
 - ❌ Never write README headings like "Three platforms. Three independent tools."
-- ✅ It's **Pickle**. With Manager Mode (`/pickle-report`) as an optional unlock for people who also manage a team in ClickUp.
-- ✅ Inbox commands (`/pickle-clickup`, `/pickle-slack`, `/pickle-teams`) are three views into the same Pickle — one per ecosystem the user uses.
+- ✅ It's **Pickle**. Inbox commands (`/pickle-clickup`, `/pickle-slack`, `/pickle-teams`) are three views into the same Pickle — one per ecosystem the user uses.
 
 ---
 
@@ -102,18 +100,16 @@ The slash command set (current and locked):
 - `/pickle-clickup`
 - `/pickle-slack`
 - `/pickle-teams`
-- `/pickle-report` (NOT `/pickle-clickup-team-report` — that was the old name, removed in v2.9.1)
 - `/pickle-update`
 
 ---
 
 ## 7. `/pickle-update` never deletes a skill the user is using
 
-The deprecated-cleanup list in `update.sh` must NEVER include a skill that's still a part of the public product. Specifically:
-- `pickle-report` must NOT be in the deprecated list (managers depend on it)
-- Only `pickle-setup` (self-deleting wizard) and `pickle-me` (retired) may be auto-removed.
+The deprecated-cleanup list in `update.sh` must NEVER include a skill that's still a part of the public product.
+- Only `pickle-setup` (self-deleting wizard), `pickle-me` (retired), and `pickle-report` (removed in v3.0.0) may be auto-removed.
 
-Adding a skill to the deprecated list = breaking every install that uses it. Don't.
+Adding a live skill to the deprecated list = breaking every install that uses it. Don't.
 
 ---
 

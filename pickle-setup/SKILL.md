@@ -1,6 +1,6 @@
 ---
 name: pickle-setup
-description: Guided onboarding for Pickle. Asks ecosystem (ClickUp, Slack, or both) — installs only what's chosen. Team gets pickle-clickup + pickle-slack (based on choice) + pickle-update. Manager gets the same plus pickle-report (only if ClickUp is connected). Self-deletes once done. Usage: /pickle-setup manager OR /pickle-setup team
+description: Guided onboarding for Pickle. Asks ecosystem (ClickUp, Slack, or both) — installs only what's chosen. Team gets pickle-clickup + pickle-slack (based on choice) + pickle-update. Manager gets the same. Self-deletes once done. Usage: /pickle-setup manager OR /pickle-setup team
 argument-hint: manager | team
 disable-model-invocation: true
 ---
@@ -82,7 +82,7 @@ I'll set up your team performance tools.
 About 3 minutes. No scripts, no terminal, no docs.
 
 You'll get: /pickle-clickup (ClickUp inbox),
-/pickle-slack (Slack inbox), /pickle-report (team pulse).
+/pickle-slack (Slack inbox).
 
 Let's start.
 ```
@@ -245,14 +245,13 @@ Skills map (determined by `PICKLE_VERSION` argument + `ECO_CHOICE`):
 | `team` | clickup | `pickle-clickup`, `pickle-update` |
 | `team` | slack | `pickle-slack`, `pickle-update` |
 | `team` | both | `pickle-clickup`, `pickle-slack`, `pickle-update` |
-| `manager` | clickup | `pickle-clickup`, `pickle-report`, `pickle-update` |
+| `manager` | clickup | `pickle-clickup`, `pickle-update` |
 | `manager` | slack | `pickle-slack`, `pickle-update` |
-| `manager` | both | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-update` |
+| `manager` | both | `pickle-clickup`, `pickle-slack`, `pickle-update` |
 | any | token path | add `pickle-mcp` to above |
 
 Rules:
 - **Only install skills for the ecosystems chosen.** ClickUp only → no `pickle-slack`. Slack only → no `pickle-clickup`. Never install unused skills.
-- **`pickle-report` is manager-only AND requires ClickUp.** Manager + Slack only → no `pickle-report`.
 - **`pickle-update` always installs** for both versions.
 - **`pickle-me` does not exist** — never install it.
 - **`pickle-setup` self-deletes** at the end of Step 7.5.
@@ -675,9 +674,9 @@ Before showing the closing summary, verify the final command palette is clean. T
 | Team · ClickUp | `pickle-clickup`, `pickle-update` | `pickle-slack`, `pickle-report`, `pickle-me`, `pickle-setup` |
 | Team · Slack | `pickle-slack`, `pickle-update` | `pickle-clickup`, `pickle-report`, `pickle-me`, `pickle-setup` |
 | Team · Both | `pickle-clickup`, `pickle-slack`, `pickle-update` | `pickle-report`, `pickle-me`, `pickle-setup` |
-| Manager · ClickUp | `pickle-clickup`, `pickle-report`, `pickle-update` | `pickle-slack`, `pickle-me`, `pickle-setup` |
+| Manager · ClickUp | `pickle-clickup`, `pickle-update` | `pickle-slack`, `pickle-report`, `pickle-me`, `pickle-setup` |
 | Manager · Slack | `pickle-slack`, `pickle-update` | `pickle-clickup`, `pickle-report`, `pickle-me`, `pickle-setup` |
-| Manager · Both | `pickle-clickup`, `pickle-slack`, `pickle-report`, `pickle-update` | `pickle-me`, `pickle-setup` |
+| Manager · Both | `pickle-clickup`, `pickle-slack`, `pickle-update` | `pickle-report`, `pickle-me`, `pickle-setup` |
 
 **The `pickle-update` skill stays forever** — it's how the user gets future versions without terminal commands. Never delete it during cleanup.
 
@@ -687,7 +686,7 @@ If `ECO_CHOICE = "clickup"`: execute `rm -rf ~/.claude/skills/pickle-slack 2>/de
 If `ECO_CHOICE = "slack"`: execute `rm -rf ~/.claude/skills/pickle-clickup 2>/dev/null` and `rm -rf ~/.claude/pickle-mcp 2>/dev/null`
 If `ECO_CHOICE = "both"`: nothing to remove.
 
-Also always execute: `rm -rf ~/.claude/skills/pickle-report 2>/dev/null` unless PICKLE_VERSION is "manager" AND ECO_CHOICE includes clickup.
+Also always execute: `rm -rf ~/.claude/skills/pickle-report 2>/dev/null`
 
 Same for MCP servers in `~/.claude.json`:
 - If ClickUp-only picked → ensure `mcpServers.slack` doesn't exist (unless user had a pre-existing Slack MCP unrelated to Pickle — preserve that).
@@ -748,10 +747,6 @@ Print a polished summary:
   [If ECO_CHOICE includes slack:]
   /pickle-slack             Scan Slack inbox (last 24h)
   /pickle-slack followup    Confirm + send DM reminders
-
-  [If PICKLE_VERSION = manager AND ECO_CHOICE includes clickup:]
-  /pickle-report [channel]  Weekly team pulse — commitment vs delivery
-  /pickle-report [ch] 14d   Two-week view
 
   /pickle-update            Update Pickle to the latest version
 

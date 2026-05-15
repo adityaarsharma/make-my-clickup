@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════
 #  🥒  Pickle — Manager Install
-#  Installs: pickle-clickup · pickle-slack · pickle-teams · pickle-report · pickle-update
+#  Installs: pickle-clickup · pickle-slack · pickle-teams · pickle-update
 #
 #  Usage (paste into Claude Code terminal):
 #    curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
@@ -82,7 +82,7 @@ else
 fi
 
 # ── Remove deprecated tools ─────────────────────────────────────
-for deprecated in pickle-setup pickle-me; do
+for deprecated in pickle-setup pickle-me pickle-report; do
   [ -d "$SKILLS_DIR/$deprecated" ] && rm -rf "$SKILLS_DIR/$deprecated" && echo "   ✓ Removed deprecated: $deprecated"
 done
 
