@@ -6,6 +6,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/adityaarsharma/pickle?style=flat-square&color=22c55e)](https://github.com/adityaarsharma/pickle/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple?style=flat-square)](https://modelcontextprotocol.io)
+[![Remote MCP](https://img.shields.io/badge/Remote%20MCP-hosted-22c55e?style=flat-square)](https://pickle.adityaarsharma.com)
 [![Works with](https://img.shields.io/badge/Works%20with-Claude%20·%20Cursor%20·%20Codex%20·%20Cline-orange?style=flat-square)](#works-with)
 [![GitHub stars](https://img.shields.io/github/stars/adityaarsharma/pickle?style=flat-square)](https://github.com/adityaarsharma/pickle/stargazers)
 
@@ -13,7 +14,13 @@
 
 **Pickle is LLM-agnostic.** The MCP server runs in any MCP-compatible AI client. The slash-command skills are a Claude Code / Claude Desktop convenience layer on top — everything Pickle does is also accessible by calling the MCP tools directly from Cursor, Codex, Cline, Continue, Zed, or your own MCP host.
 
-**Built by [Aditya Sharma](https://adityaarsharma.com)** · **Runs 100% on your machine** · **No telemetry, no phone-home, no cloud**
+## 👉 The official way to install Pickle is the Cloud
+
+**[pickle.adityaarsharma.com](https://pickle.adityaarsharma.com)** — get a free key, paste one config block into Claude/Cursor/Codex/Cline, you're live in 60 seconds. No Node.js, no shell scripts, no maintenance.
+
+This GitHub repo exists for transparency and self-host. **The code is here so you can read it, audit it, and run it yourself if you want — but the supported, documented, recommended install path is the hosted Cloud.** Self-host is unsupported.
+
+**Built by [Aditya Sharma](https://adityaarsharma.com)** · **No telemetry, no phone-home**
 
 **Keywords:** MCP · MCP Server · Model Context Protocol · Cursor · Codex · ClickUp AI · Slack AI · Microsoft Teams · Team Management · Standup Bot · Performance Report · Engineering Manager · AI Productivity · Self-Hosted AI Tool · LLM Agent · Project Management AI
 
@@ -36,7 +43,7 @@ Pickle ships in two parts:
 | **Continue** | ✅ | Add MCP server to `~/.continue/config.json` |
 | **Zed** | ✅ | MCP support added in 2025; configure as a context server |
 | **Goose** | ✅ | `goose extension add` with the Pickle MCP path |
-| **Anything that speaks MCP** | ✅ | Point it at `~/.claude/pickle-mcp/clickup/server.mjs` |
+| **Anything that speaks MCP** | ✅ | Point it at `https://pickle.adityaarsharma.com/mcp` (remote) or `~/.claude/pickle-mcp/clickup/server.mjs` (local) |
 
 The slash-command UX is the fastest path, but everything Pickle does (scanning DMs, building reports, drafting follow-ups) is achievable in any MCP host by calling the tools directly. The skills are convenience, not lock-in.
 
@@ -173,58 +180,106 @@ That cross-tool synthesis is the entire point of Pickle.
 
 ---
 
-## Install
+## Install (Cloud — recommended)
 
-Open Claude Code. Paste this message into chat:
+No Node.js. No npm. No local server. Just add Pickle's hosted endpoint to your MCP config and you're live in 60 seconds.
 
-**For managers:**
+**Step 1:** Get a free key at **[pickle.adityaarsharma.com](https://pickle.adityaarsharma.com)**
+**Step 2:** Copy your ClickUp `pk_…` token from ClickUp → Settings → Apps → API Token
+**Step 3:** Paste the config block below into your AI host. Restart. Done.
+
+**Claude Code / Claude Desktop** — add to `~/.claude.json`:
+```json
+{
+  "mcpServers": {
+    "pickle": {
+      "type": "http",
+      "url": "https://pickle.adityaarsharma.com/mcp",
+      "headers": {
+        "x-pickle-key": "pickle_free_YOUR_KEY",
+        "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+      }
+    }
+  }
+}
 ```
-Install Pickle (manager version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-manager.sh | bash
+
+**Cursor** — Settings → MCP → Add new server → paste:
+```json
+{
+  "pickle": {
+    "type": "http",
+    "url": "https://pickle.adityaarsharma.com/mcp",
+    "headers": {
+      "x-pickle-key": "pickle_free_YOUR_KEY",
+      "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+    }
+  }
+}
 ```
 
-**For team members:**
-```
-Install Pickle (team member version) by running: curl -fsSL https://raw.githubusercontent.com/adityaarsharma/pickle/main/install-team.sh | bash
+**Cline** — `.clinerules` or VSCode MCP settings:
+```json
+{
+  "mcpServers": {
+    "pickle": {
+      "type": "http",
+      "url": "https://pickle.adityaarsharma.com/mcp",
+      "headers": {
+        "x-pickle-key": "pickle_free_YOUR_KEY",
+        "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+      }
+    }
+  }
+}
 ```
 
-After install, `/pickle-setup` runs automatically. Takes 2 minutes. Asks your name, role, and ClickUp API token — then you're live.
+**Codex / OpenAI Agent SDK** — `mcp.config.json`:
+```json
+{
+  "servers": [
+    {
+      "name": "pickle",
+      "type": "http",
+      "url": "https://pickle.adityaarsharma.com/mcp",
+      "headers": {
+        "x-pickle-key": "pickle_free_YOUR_KEY",
+        "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+      }
+    }
+  ]
+}
+```
 
-**Requires:** Node.js LTS ([nodejs.org](https://nodejs.org))
+After adding the config, restart your MCP host — all 40 Pickle tools appear automatically.
+
+---
+
+### Self-host (advanced — unsupported)
+
+If you'd rather run Pickle inside your own network, the code is here. **No install script, no helper command — this path is intentionally manual.** You should be comfortable with Node.js, reverse proxies, TLS, and process managers before you go this route.
+
+```bash
+git clone https://github.com/adityaarsharma/pickle.git
+cd pickle/server-remote
+npm install
+node server.mjs
+# Then reverse-proxy it to your domain and add the URL to your MCP host.
+```
+
+**Requirements:** Node.js LTS, your own server, your own TLS, your own uptime. Read [server-remote/server.mjs](server-remote/server.mjs) before running. No support — community-only.
 
 ---
 
 ## Connect ClickUp — 30 seconds
 
-Pickle uses its own MCP server. No third-party connector needed. Your token stays on your machine.
+1. Open [app.clickup.com](https://app.clickup.com) → avatar → Settings → Apps
+2. Under **ClickUp API**, click **Generate** → copy the `pk_…` token
+3. Paste it into the `x-clickup-token` header in your MCP config above
 
-1. Open [app.clickup.com](https://app.clickup.com) → avatar → Settings → Integrations & ClickApps → ClickUp API
-2. Click **Generate** → copy the `pk_…` token
-3. Paste it when `/pickle-setup` asks
-4. Quit Claude Code (Cmd+Q) and reopen — done
+Your token travels in the HTTPS request header to Pickle's server, gets used to call ClickUp's API on your behalf, then is discarded. Never stored, never logged.
 
-Token is stored in `~/.claude.json` on your machine. Never uploaded anywhere.
-
-## Connect Slack — 2 minutes
-
-Pickle reads Slack via your own user token — not a shared app, not a connector. Full DM and channel access.
-
-`/pickle-setup` walks you through creating a free Slack app and pasting the `xoxp-` token. Takes 2 minutes. Always free on every Slack plan.
-
-## Connect Microsoft Teams
-
-Pickle reads Teams via your own Microsoft Graph API token — no third-party connector, your token stays on your machine. `/pickle-teams` walks you through it the first time you run it.
-
-**Persistent setup** (one-time, auto-refreshes after):
-1. [portal.azure.com](https://portal.azure.com) → App registrations → New registration ("Pickle CLI", Personal Microsoft accounts)
-2. API permissions → Add → Microsoft Graph (Delegated): `Chat.Read`, `ChannelMessage.Read.All`, `Team.ReadBasic.All`, `User.Read`, `Tasks.ReadWrite`, `offline_access`
-3. `/pickle-teams` runs the device-flow sign-in for you and saves the token to `~/.claude/pickle/teams-config.json`
-
-**Quick test** (1-hour token, no Azure app needed):
-1. [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer) → sign in with your Teams account
-2. DevTools → Network → copy the `Authorization: Bearer …` value
-3. `/pickle-teams` will prompt to paste the token — done
-
-Token file is created with `chmod 600`. Auto-refreshes if you used the Azure app path.
+> **Slack and Microsoft Teams support** is on the Cloud roadmap — the local skills shipped earlier are being migrated. For now, Cloud is ClickUp-only.
 
 ---
 
@@ -246,38 +301,31 @@ Token file is created with `chmod 600`. Auto-refreshes if you used the Azure app
 
 ---
 
-## Privacy — your data never leaves your machine
+## Privacy
 
-Pickle runs entirely inside your Claude Code session. There is no Pickle server. Your ClickUp token, Slack token, chat messages, and task data are never sent anywhere except the standard Claude API call. You can verify this by reading the source — it's all here in this repo.
+Pickle is built stateless. Your ClickUp token travels in the HTTPS request header, gets used to call ClickUp's API on your behalf, and is discarded when the response is sent. **The server stores no tokens, no task data, no chat content, no logs.** Each request is independent; nothing persists.
+
+The only thing Pickle's server stores is your email + free key — only if you submit one on the landing page — for product updates. Unsubscribe anytime.
+
+The full source of the remote server is in this repo at [server-remote/server.mjs](server-remote/server.mjs) — audit it before you connect.
 
 **To revoke access instantly:**
-- ClickUp: Settings → Integrations & ClickApps → ClickUp API → Generate a new token (old one dies immediately)
-- Slack: api.slack.com/apps → your Pickle app → Install App → Revoke
+- ClickUp: Settings → Apps → ClickUp API → Generate a new token (old one dies immediately)
+- Pickle: just remove the MCP config block — there's no account to delete
 
 ---
 
-## Update
+## Updates
 
-```
-/pickle-update
-```
+Cloud users get updates automatically — every new pattern, every fix, every new tool. Nothing for you to do.
 
-Pulls the latest version from GitHub. Your tokens, role, and report history are untouched.
+Self-host users: `git pull && npm install && restart the process`. No update script — keep it intentionally manual.
 
 ---
 
 ## Uninstall
 
-```bash
-rm -rf ~/.claude/skills/pickle-clickup \
-       ~/.claude/skills/pickle-slack \
-       ~/.claude/skills/pickle-teams \
-       ~/.claude/skills/pickle-update \
-       ~/.claude/pickle-mcp \
-       ~/.claude/pickle
-```
-
-Remove the `mcpServers.clickup` and/or `mcpServers.slack` entries from `~/.claude.json`.
+Cloud: remove the `pickle` block from your MCP config. That's it — there's no account, no data, nothing left to delete.
 
 ---
 
@@ -290,4 +338,4 @@ Remove the `mcpServers.clickup` and/or `mcpServers.slack` entries from `~/.claud
 
 ---
 
-Built by [Aditya Sharma](https://adityaarsharma.com) · [adityaarsharma.com/pickle](https://adityaarsharma.com/pickle)
+Built by [Aditya Sharma](https://adityaarsharma.com) · [pickle.adityaarsharma.com](https://pickle.adityaarsharma.com)
