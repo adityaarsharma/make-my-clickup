@@ -184,9 +184,9 @@ That cross-tool synthesis is the entire point of Pickle.
 
 No Node.js. No npm. No local server. Just add Pickle's hosted endpoint to your MCP config and you're live in 60 seconds.
 
-**Step 1:** Get a free key at **[pickle.adityaarsharma.com](https://pickle.adityaarsharma.com)**
-**Step 2:** Copy your ClickUp `pk_…` token from ClickUp → Settings → Apps → API Token
-**Step 3:** Paste the config block below into your AI host. Restart. Done.
+**Step 1:** Get a free Beta key at **[pickle.adityaarsharma.com](https://pickle.adityaarsharma.com)**
+**Step 2:** Paste the Pickle-key-only config block below into your AI host. Restart.
+**Step 3:** In chat, ask Pickle: *"Pickle, set me up for ClickUp"* (or Slack, or Teams). Pickle walks you through grabbing the token from your settings and tells you which header line to add. **Tokens stay on your machine** — in your local MCP config, never in the public repo.
 
 **Claude Code / Claude Desktop** — add to `~/.claude.json`:
 ```json
@@ -196,8 +196,7 @@ No Node.js. No npm. No local server. Just add Pickle's hosted endpoint to your M
       "type": "http",
       "url": "https://pickle.adityaarsharma.com/mcp",
       "headers": {
-        "x-pickle-key": "pickle_free_YOUR_KEY",
-        "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+        "x-pickle-key": "pickle_free_YOUR_KEY"
       }
     }
   }
@@ -211,8 +210,7 @@ No Node.js. No npm. No local server. Just add Pickle's hosted endpoint to your M
     "type": "http",
     "url": "https://pickle.adityaarsharma.com/mcp",
     "headers": {
-      "x-pickle-key": "pickle_free_YOUR_KEY",
-      "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+      "x-pickle-key": "pickle_free_YOUR_KEY"
     }
   }
 }
@@ -226,8 +224,7 @@ No Node.js. No npm. No local server. Just add Pickle's hosted endpoint to your M
       "type": "http",
       "url": "https://pickle.adityaarsharma.com/mcp",
       "headers": {
-        "x-pickle-key": "pickle_free_YOUR_KEY",
-        "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+        "x-pickle-key": "pickle_free_YOUR_KEY"
       }
     }
   }
@@ -243,15 +240,14 @@ No Node.js. No npm. No local server. Just add Pickle's hosted endpoint to your M
       "type": "http",
       "url": "https://pickle.adityaarsharma.com/mcp",
       "headers": {
-        "x-pickle-key": "pickle_free_YOUR_KEY",
-        "x-clickup-token": "pk_YOUR_CLICKUP_TOKEN"
+        "x-pickle-key": "pickle_free_YOUR_KEY"
       }
     }
   ]
 }
 ```
 
-After adding the config, restart your MCP host — all 40 Pickle tools appear automatically.
+After adding the config, restart your MCP host — then ask Pickle in chat to set up each platform.
 
 ---
 
@@ -271,15 +267,16 @@ node server.mjs
 
 ---
 
-## Connect ClickUp — 30 seconds
+## Connect ClickUp / Slack / Microsoft Teams — via chat
 
-1. Open [app.clickup.com](https://app.clickup.com) → avatar → Settings → Apps
-2. Under **ClickUp API**, click **Generate** → copy the `pk_…` token
-3. Paste it into the `x-clickup-token` header in your MCP config above
+After Pickle is installed (Beta key only), just ask in chat: *"Pickle, set me up for ClickUp"*. Pickle returns a 30-second walkthrough for getting the token from your settings and gives you the exact header line to paste into your **local** MCP config. Repeat for Slack and Microsoft Teams when you want to connect those.
 
-Your token travels in the HTTPS request header to Pickle's server, gets used to call ClickUp's API on your behalf, then is discarded. Never stored, never logged.
+**Where tokens live:**
+- Your tokens never go in the public repo, the landing page, or any sample.
+- They go in your local MCP host config file (`~/.claude.json`, Cursor MCP settings, etc.) — same place your `x-pickle-key` lives.
+- On each request, the token travels in the HTTPS header to Pickle's server, gets used to call the platform API on your behalf, then is discarded. Never stored server-side, never logged.
 
-> **Slack and Microsoft Teams support** is on the Cloud roadmap — the local skills shipped earlier are being migrated. For now, Cloud is ClickUp-only.
+> **Slack and Microsoft Teams support** is on the Cloud roadmap. ClickUp is live today. Manager Mode (multi-person reports across all 3 platforms) ships with Pro after the Beta closes.
 
 ---
 
